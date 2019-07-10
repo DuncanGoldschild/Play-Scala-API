@@ -6,12 +6,20 @@
 # An example controller showing a sample home page
 GET     /                           controllers.HomeController.index
 
-
+#Read all
 GET     /foods                      controllers.HomeController.listFood
+
+#Create one
 POST    /foods                      controllers.HomeController.newFood
 
+#Read one
 GET     /food/:id                   controllers.HomeController.getFood(id : Int)
-DELETE  /delete/food/:id            controllers.HomeController.deleteFood(id : Int)
+
+#Delete one
+DELETE  /food/:id                   controllers.HomeController.deleteFood(id : Int)
+
+#Update one
+PUT     /food/:id                   controllers.HomeController.updateFood(id : Int)
 
 
 
