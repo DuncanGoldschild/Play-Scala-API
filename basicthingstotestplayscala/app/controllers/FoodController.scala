@@ -80,13 +80,8 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     val futureFoodsList: Future[List[BSONDocument]] =
       cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
 
-    // transform the list into a JsArray
-    val futureFoodsJsonArray: Future[JsArray] =
-      futureFoodsList.map { food => Json.arr(food) }
-
-    // everything's ok! Let's reply with the array
-    futureFoodsJsonArray.map { food =>
-      Ok(food)
+    futureFoodsList.map { food =>
+      Ok(Json.toJson(food))
     }
   
   }
@@ -105,13 +100,8 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     val futureFoodsList: Future[List[BSONDocument]] =
       cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
 
-    // transform the list into a JsArray
-    val futureFoodsJsonArray: Future[JsArray] =
-      futureFoodsList.map { food => Json.arr(food) }
-
-    // everything's ok! Let's reply with the array
-    futureFoodsJsonArray.map { food =>
-      Ok(food)
+    futureFoodsList.map { food =>
+      Ok(Json.toJson(food))
     }
   
   }
