@@ -88,9 +88,7 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
 
   // Display all Food elements with GET /foods
   def listFood = Action.async {
-    // let's do our query
     val cursor: Future[Cursor[BSONDocument]] = collection.map {
-      // find all people with id : id
       _.find(BSONDocument()).
         // perform the query and get a cursor of BSONDocument
         cursor[BSONDocument](ReadPreference.primary)
