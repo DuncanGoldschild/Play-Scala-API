@@ -40,12 +40,11 @@ class FoodController @Inject() (
 ) extends AbstractController(components)
   with MongoController with ReactiveMongoComponents {
 
-
+case class Food(id : Int, name : String)
 
   def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("Food"))
     
-case class Food(id : Int, name : String)
 
 implicit object FoodWriter extends BSONDocumentWriter[Food] {
   def write(food: Food): BSONDocument =
@@ -66,7 +65,6 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
   implicit val foodWrites = Json.writes[Food] 
   implicit val foodReads = Json.reads[Food] 
 
-  
 // TODO return Action [Food] or Action [BSONDocument]
 // Display the Food by its id with GET /food/"id"
   def findById(id: Int) = Action.async {
@@ -93,14 +91,12 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
   
   }
 
-
-
-// Display all Food elements with GET /foods
+  // Display all Food elements with GET /foods
   def listFood = Action.async {
     // let's do our query
     val cursor: Future[Cursor[BSONDocument]] = collection.map {
       // find all people with id : id
-      _.find(Json.obj()).
+      _.find(BSONDocument()).
         // perform the query and get a cursor of BSONDocument
         cursor[BSONDocument](ReadPreference.primary)
     }
@@ -120,31 +116,30 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
   
   }
 
-// Delete with DELETE /food/"id"
-def deleteFood(id : Int) =  Action {
-  val selector1 = BSONDocument("id" -> id)
+  // Delete with DELETE /food/"id"
+  def deleteFood(id : Int) =  Action {
+    val selector1 = BSONDocument("id" -> id)
 
-  val futureRemove1 = collection.map {_.delete.one(selector1)}
+    val futureRemove1 = collection.map {_.delete.one(selector1)}
 
-  futureRemove1.onComplete { // callback
-    case Failure(e) => throw e
-    case Success(writeResult) => Created
+    futureRemove1.onComplete { // callback
+      case Failure(e) => throw e
+      case Success(writeResult) => Created
+    }
+    // TODO : request handler cannot be type UNIT
+    Ok("")
+
   }
-  // TODO : request handler cannot be type UNIT
-  Ok("")
 
-}
-
-
-// Add with POST /foods
-    def newFood = Action.async(parse.json) { request =>
-    request.body.validate[Food].map { food =>
-      collection.flatMap(_.insert.one(food)).map { lastError =>
-        Logger.debug(s"Successfully inserted with LastError: $lastError")
-        Created
-      }
-    }.getOrElse(Future.successful(BadRequest("invalid json")))
-  }
+  // Add with POST /foods
+  def newFood = Action.async(parse.json) { request =>
+      request.body.validate[Food].map { food =>
+        collection.flatMap(_.insert.one(food)).map { lastError =>
+          Logger.debug(s"Successfully inserted with LastError: $lastError")
+          Created
+        }
+      }.getOrElse(Future.successful(BadRequest("invalid json")))
+  } 
 
   // Update with PUT /food/"id"
   def updateFood(id : Int) = Action.async(parse.json) { request =>
@@ -156,16 +151,8 @@ def deleteFood(id : Int) =  Action {
     }.getOrElse(Future.successful(BadRequest("invalid json")))
   }
 
-// Home
+  // Home
   def index() = Action { implicit request: Request[AnyContent] =>
     Ok(views.html.index())
   }  
 }
-
-/*
-Commande linux pour POST et DELETE
-
-curl     --header "Content-type: application/json"     --request POST     --data '{"id":98, "name":"Salade"}'     http://localhost:9000/foods
-curl     --header "Content-type: application/json"     --request DELETE    http://localhost:9000/food/2
-curl -X PUT -H "Content-Type: application/json" -d '{"id": 10 , "name" : "spaghetti"}' "http://localhost:9000/food/3"
-*/
