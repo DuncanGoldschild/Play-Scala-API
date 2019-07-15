@@ -62,26 +62,15 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
   implicit val foodWrites = Json.writes[Food] 
   implicit val foodReads = Json.reads[Food] 
 
-// TODO return Action [Food] or Action [BSONDocument]
 // Display the Food by its id with GET /food/"id"
   def findById(id: Int) = Action.async {
-    // let's do our query
-    val cursor: Future[Cursor[BSONDocument]] = collection.map {
-      // find all people with id : id
-      _.find(Json.obj("id" -> id)).
-        // perform the query and get a cursor of BSONDocument
-        cursor[BSONDocument](ReadPreference.primary)
-    }
-  
-    // gather all the BSONDocuments in a list
-    val futureFoodsList: Future[List[BSONDocument]] =
-      cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
-
-    futureFoodsList.map { food =>
-      Ok(Json.toJson(food))
-    }
-  
-  }
+  collection.flatMap(_.find(Json.obj("id" -> id)).one[Food]).map{ 
+    case Some(p) => Ok(Json.toJson(p))
+    case None    => Ok("Person Not Found.")
+  }.recover{ case t: Throwable =>
+    Ok("error")
+  } 
+}
 
   // Display all Food elements with GET /foods
   def listFood = Action.async {
