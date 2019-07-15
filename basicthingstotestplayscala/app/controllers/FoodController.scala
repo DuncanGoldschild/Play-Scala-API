@@ -68,7 +68,7 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     case Some(p) => Ok(Json.toJson(p))
     case None    => NotFound
   }.recover{ case t: Throwable =>
-    Ok("error")
+    InternalServerError
   } 
 }
 
@@ -87,23 +87,22 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     futureFoodsList.map { 
       case food => Ok(Json.toJson(food))
       case _ => NotFound
-    }
-  
+    }.recover{ case t: Throwable =>
+    InternalServerError
+  } 
   }
 
   // Delete with DELETE /food/"id"
-  def deleteFood(id : Int) =  Action {
+  def deleteFood(id : Int) =  Action.async {
     val selector1 = BSONDocument("id" -> id)
 
-    val futureRemove1 = collection.map {_.delete.one(selector1)}
-
-    futureRemove1.onComplete { // callback
-      case Failure(e) => NotFound
-      case Success(writeResult) => Created
-    }
-
-    Ok("")
-
+    val futureRemove1 = collection.flatMap(_.delete.one(selector1))
+    
+    futureRemove1.map{
+      res => if (res.ok && res.n == 1) NoContent else NotFound
+    }.recover{ case t: Throwable =>
+        InternalServerError
+      } 
   }
 
   // Add with POST /foods
@@ -113,7 +112,9 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
           Logger.debug(s"Successfully inserted with LastError: $lastError")
           Created
         }
-      }.getOrElse(Future.successful(BadRequest("invalid json")))
+      }.getOrElse(Future.successful(BadRequest("invalid json"))).recover{ case t: Throwable =>
+        InternalServerError
+      }
   } 
 
   // Update with PUT /food/"id"
@@ -121,9 +122,11 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     request.body.validate[Food].map { food =>
       collection.flatMap(_.update.one(q = BSONDocument("id" -> id), u = food, upsert = false, multi = false)).map { lastError =>
         Logger.debug(s"Successfully updated with LastError: $lastError")
-        Created
+        NoContent
       }
-    }.getOrElse(Future.successful(BadRequest("invalid json")))
+    }.getOrElse(Future.successful(BadRequest("invalid json"))).recover{ case t: Throwable =>
+        InternalServerError
+      }
   }
 
   // Home
