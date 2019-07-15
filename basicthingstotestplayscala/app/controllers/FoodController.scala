@@ -4,12 +4,14 @@ package controllers
 import scala.collection.mutable._
 import javax.inject._
 import scala.util.{ Failure, Success }
-// Reactive Mongo imports
-import reactivemongo.api.Cursor
-import reactivemongo.api.ReadPreference
-
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+
+import reactivemongo.api.Cursor
+import reactivemongo.api.ReadPreference
+import reactivemongo.bson._
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.play.json._, collection._
 
 import play.modules.reactivemongo.{ // ReactiveMongo Play2 plugin
   MongoController,
@@ -17,17 +19,12 @@ import play.modules.reactivemongo.{ // ReactiveMongo Play2 plugin
   ReactiveMongoComponents
 }
 
-// BSON-JSON conversions/collection
-import reactivemongo.play.json._, collection._
-
 import play.api._
 import play.api.mvc._
 import play.api.libs.json._
-
-import reactivemongo.bson._
-import reactivemongo.api.collections.bson.BSONCollection
-import com.google.inject.Singleton
 import play.api.libs.functional.syntax._
+
+import com.google.inject.Singleton
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
