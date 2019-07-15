@@ -66,7 +66,7 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
   def findById(id: Int) = Action.async {
   collection.flatMap(_.find(Json.obj("id" -> id)).one[Food]).map{ 
     case Some(p) => Ok(Json.toJson(p))
-    case None    => Ok("Person Not Found.")
+    case None    => NotFound
   }.recover{ case t: Throwable =>
     Ok("error")
   } 
@@ -84,8 +84,9 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     val futureFoodsList: Future[List[BSONDocument]] =
       cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
 
-    futureFoodsList.map { food =>
-      Ok(Json.toJson(food))
+    futureFoodsList.map { 
+      case food => Ok(Json.toJson(food))
+      case _ => NotFound
     }
   
   }
@@ -97,10 +98,10 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     val futureRemove1 = collection.map {_.delete.one(selector1)}
 
     futureRemove1.onComplete { // callback
-      case Failure(e) => throw e
+      case Failure(e) => NotFound
       case Success(writeResult) => Created
     }
-    // TODO : request handler cannot be type UNIT
+
     Ok("")
 
   }
