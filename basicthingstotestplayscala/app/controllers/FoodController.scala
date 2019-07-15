@@ -69,8 +69,8 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     case None    => NotFound
   }.recover{ case t: Throwable =>
     throw (t)
-  } 
-}
+    } 
+  }
 
   // Display all Food elements with GET /foods
   def listFood = Action.async {
@@ -89,15 +89,14 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
       case _ => NotFound
     }.recover{ case t: Throwable =>
     throw (t)
-  } 
+      } 
   }
 
   // Delete with DELETE /food/"id"
   def deleteFood(id : Int) =  Action.async {
     val selector1 = BSONDocument("id" -> id)
-
     val futureRemove1 = collection.flatMap(_.delete.one(selector1))
-    
+
     futureRemove1.map{
       res => if (res.ok && res.n == 1) NoContent else NotFound
     }.recover{ case t: Throwable =>
@@ -110,14 +109,14 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
   def newFood = Action(parse.json) { request =>
       val foodResult = request.body.validate[Food]
       foodResult.fold(
-      errors => {
-        BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
-      },
-      food => {
-          collection.flatMap(_.insert.one(food))
-          Created
-      }
-    )
+        errors => {
+          BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+        },
+        food => {
+            collection.flatMap(_.insert.one(food))
+            Created
+        }
+      )
   } 
 
   // Update with PUT /food/"id"
