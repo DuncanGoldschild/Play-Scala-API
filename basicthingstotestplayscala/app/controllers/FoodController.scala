@@ -68,7 +68,7 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     case Some(p) => Ok(Json.toJson(p))
     case None    => NotFound
   }.recover{ case t: Throwable =>
-    InternalServerError
+    throw (t)
   } 
 }
 
@@ -88,7 +88,7 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
       case food => Ok(Json.toJson(food))
       case _ => NotFound
     }.recover{ case t: Throwable =>
-    InternalServerError
+    throw (t)
   } 
   }
 
@@ -101,32 +101,37 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
     futureRemove1.map{
       res => if (res.ok && res.n == 1) NoContent else NotFound
     }.recover{ case t: Throwable =>
-        InternalServerError
+        throw (t)
       } 
   }
+  
 
   // Add with POST /foods
-  def newFood = Action.async(parse.json) { request =>
-      request.body.validate[Food].map { food =>
-        collection.flatMap(_.insert.one(food)).map { lastError =>
-          Logger.debug(s"Successfully inserted with LastError: $lastError")
+  def newFood = Action(parse.json) { request =>
+      val foodResult = request.body.validate[Food]
+      foodResult.fold(
+      errors => {
+        BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+      },
+      food => {
+          collection.flatMap(_.insert.one(food))
           Created
-        }
-      }.getOrElse(Future.successful(BadRequest("invalid json"))).recover{ case t: Throwable =>
-        InternalServerError
       }
+    )
   } 
 
   // Update with PUT /food/"id"
-  def updateFood(id : Int) = Action.async(parse.json) { request =>
-    request.body.validate[Food].map { food =>
-      collection.flatMap(_.update.one(q = BSONDocument("id" -> id), u = food, upsert = false, multi = false)).map { lastError =>
-        Logger.debug(s"Successfully updated with LastError: $lastError")
-        NoContent
+  def updateFood(id : Int) = Action(parse.json) { request =>
+    val foodResult = request.body.validate[Food]
+    foodResult.fold(
+      errors => {
+        BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+      },
+      food => {
+          collection.flatMap(_.update.one(q = BSONDocument("id" -> id), u = food, upsert = false, multi = false))
+          NoContent
       }
-    }.getOrElse(Future.successful(BadRequest("invalid json"))).recover{ case t: Throwable =>
-        InternalServerError
-      }
+    )
   }
 
   // Home
