@@ -40,7 +40,7 @@ class FoodController @Inject() (
 case class Food(id : Int, name : String)
 
   def collection: Future[BSONCollection] =
-    database.map(_.collection[BSONCollection]("Food"))
+    database.map(_.collection[BSONCollection]("food"))
     
 
 implicit object FoodWriter extends BSONDocumentWriter[Food] {
@@ -104,7 +104,7 @@ implicit object FoodReader extends BSONDocumentReader[Food] {
       } 
   }
   
-
+  // TODO : delete id of Food and use mongodb's provided one => recherche par ordre d'insertion ?
   // Add with POST /foods
   def newFood = Action(parse.json) { request =>
       val foodResult = request.body.validate[Food]
