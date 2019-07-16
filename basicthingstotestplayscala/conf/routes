@@ -4,22 +4,22 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
+GET     /                           controllers.FoodController.index
 
 #Read all
-GET     /foods                      controllers.HomeController.listFood
+GET     /foods                      controllers.FoodController.listFood
 
 #Create one
-POST    /foods                      controllers.HomeController.newFood
+POST    /foods                      controllers.FoodController.newFood
 
 #Read one
-GET     /food/:id                   controllers.HomeController.getFood(id : Int)
+GET     /food/:id                   controllers.FoodController.findById(id : Int)
 
 #Delete one
-DELETE  /food/:id                   controllers.HomeController.deleteFood(id : Int)
+DELETE  /food/:id                   controllers.FoodController.deleteFood(id : Int)
 
 #Update one
-PUT     /food/:id                   controllers.HomeController.updateFood(id : Int)
+PUT     /food/:id                   controllers.FoodController.updateFood(id : Int)
 
 
 

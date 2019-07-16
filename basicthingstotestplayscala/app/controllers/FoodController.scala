@@ -1,0 +1,140 @@
+package controllers
+
+
+import scala.collection.mutable._
+import javax.inject._
+import scala.util.{ Failure, Success }
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+
+import reactivemongo.api.Cursor
+import reactivemongo.api.ReadPreference
+import reactivemongo.bson._
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.play.json._, collection._
+
+import play.modules.reactivemongo.{ // ReactiveMongo Play2 plugin
+  MongoController,
+  ReactiveMongoApi,
+  ReactiveMongoComponents
+}
+
+import play.api._
+import play.api.mvc._
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
+import com.google.inject.Singleton
+
+/**
+ * This controller creates an `Action` to handle HTTP requests to the
+ * application's home page.
+ */
+@Singleton
+class FoodController @Inject() (
+  components: ControllerComponents,
+  val reactiveMongoApi: ReactiveMongoApi
+) extends AbstractController(components)
+  with MongoController with ReactiveMongoComponents {
+
+case class Food(id : Int, name : String)
+
+  def collection: Future[BSONCollection] =
+    database.map(_.collection[BSONCollection]("food"))
+    
+
+implicit object FoodWriter extends BSONDocumentWriter[Food] {
+  def write(food: Food): BSONDocument =
+    BSONDocument("id" -> food.id, "name" -> food.name)
+}
+
+implicit object FoodReader extends BSONDocumentReader[Food] {
+  def read(bson: BSONDocument): Food = {
+    val opt: Option[Food] = for {
+      name <- bson.getAs[String]("name")
+      id <- bson.getAs[BSONNumberLike]("id").map(_.toInt)
+    } yield new Food(id, name)
+
+    opt.get // the person is required (or let throw an exception)
+  }
+}
+
+  implicit val foodWrites = Json.writes[Food] 
+  implicit val foodReads = Json.reads[Food] 
+
+// Display the Food by its id with GET /food/"id"
+  def findById(id: Int) = Action.async {
+  collection.flatMap(_.find(Json.obj("id" -> id)).one[Food]).map{ 
+    case Some(p) => Ok(Json.toJson(p))
+    case None    => NotFound
+  }.recover{ case t: Throwable =>
+    throw (t)
+    } 
+  }
+
+  // Display all Food elements with GET /foods
+  def listFood = Action.async {
+    val cursor: Future[Cursor[BSONDocument]] = collection.map {
+      _.find(BSONDocument()).
+        // perform the query and get a cursor of BSONDocument
+        cursor[BSONDocument](ReadPreference.primary)
+    }
+  
+    // gather all the BSONDocuments in a list
+    val futureFoodsList: Future[List[BSONDocument]] =
+      cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
+
+    futureFoodsList.map { 
+      case food => Ok(Json.toJson(food))
+      case _ => NotFound
+    }.recover{ case t: Throwable =>
+    throw (t)
+      } 
+  }
+
+  // Delete with DELETE /food/"id"
+  def deleteFood(id : Int) =  Action.async {
+    val selector1 = BSONDocument("id" -> id)
+    val futureRemove1 = collection.flatMap(_.delete.one(selector1))
+
+    futureRemove1.map{
+      res => if (res.ok && res.n == 1) NoContent else NotFound
+    }.recover{ case t: Throwable =>
+        throw (t)
+      } 
+  }
+  
+  // TODO : delete id of Food and use mongodb's provided one => recherche par ordre d'insertion ?
+  // Add with POST /foods
+  def newFood = Action(parse.json) { request =>
+      val foodResult = request.body.validate[Food]
+      foodResult.fold(
+        errors => {
+          BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+        },
+        food => {
+            collection.flatMap(_.insert.one(food))
+            Created
+        }
+      )
+  } 
+
+  // Update with PUT /food/"id"
+  def updateFood(id : Int) = Action(parse.json) { request =>
+    val foodResult = request.body.validate[Food]
+    foodResult.fold(
+      errors => {
+        BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+      },
+      food => {
+          collection.flatMap(_.update.one(q = BSONDocument("id" -> id), u = food, upsert = false, multi = false))
+          NoContent
+      }
+    )
+  }
+
+  // Home
+  def index() = Action { implicit request: Request[AnyContent] =>
+    Ok(views.html.index())
+  }  
+}
