@@ -1,53 +1,85 @@
 package repositories
 
-import javax.inject.Inject
- 
-import play.api.libs.json.{JsObject, Json}
-import play.modules.reactivemongo.ReactiveMongoApi
-import play.modules.reactivemongo.json._
-import play.modules.reactivemongo.json.collection.JSONCollection
+import models.{Food, FoodWithoutId}
+import play.api.mvc._
+import javax.inject._
+
+import scala.concurrent._
+import reactivemongo.api.Cursor
 import reactivemongo.api.ReadPreference
-import reactivemongo.api.commands.WriteResult
+import reactivemongo.api.commands.{UpdateWriteResult, WriteResult}
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
- 
-import scala.concurrent.{ExecutionContext, Future}
+import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
+import exception.{NotFoundResourceException, TechnicalDBException}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Success, Try}
 
 sealed trait FoodRepository {
 
-    def listAll: List[Food]
+    def listAll: Future[List[Food]]
 
-    def listAll(count: Int, offset: Int): List[Food] // cf pagination
+    def listAll(count: Int): Future[List[Food]] // cf pagination
 
-    def findOne(id: Int): Future[Option[Food]]
+    def findOne(id: String): Future[Option[Food]]
 
-    def updateOne(id: Int): Future[WriteResult]
+    def updateOne(id: String , newFood : FoodWithoutId): Future[Option[Unit]]
 
-    def deleteOne(id: Int): Either[NotFound, Unit]
+    def deleteOne(id: String): Future[Option[Unit]]
 
-    def createOne(id: Int): Food
+    def createOne(newFood : FoodWithoutId): Future[Food]
 
 }
 
-class MongoFoodRepository @Inject() (reactiveMongoApi: ReactiveMongoApi) extends FoodRepository {
+class MongoFoodRepository @Inject() (
+    components: ControllerComponents,
+    val reactiveMongoApi: ReactiveMongoApi
+  ) extends AbstractController(components)
+    with MongoController with ReactiveMongoComponents with FoodRepository {
 
     def collection: Future[BSONCollection] =
         database.map(_.collection[BSONCollection]("food"))
 
-    override def listAll : List[Food] ={
-        val cursor: Future[Cursor[BSONDocument]] = collection.map {
-        _.find(BSONDocument()).cursor[BSONDocument](ReadPreference.primary)
+    override def listAll : Future[List[Food]] = {
+        val cursor: Future[Cursor[Food]] = collection.map {
+        _.find(BSONDocument()).cursor[Food](ReadPreference.primary)
          }   
-        // gather all the BSONDocuments in a list
-        val futureFoodsList: Future[List[BSONDocument]] =
-        cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
-        }
-    override def listAll(count: Int, offset: Int): List[Food] =
-        collection.flatMap(_.find(Json.obj("id" -> id)).one[Food])
+        // gather all the Foods in a list
+        cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[Food]]())
+        )
+    }
          
+    override def listAll(count: Int): Future[List[Food]] = {
+      val cursor: Future[Cursor[Food]] = collection.map {
+        _.find(BSONDocument()).cursor[Food](ReadPreference.primary)
+      }
+      // gather all the Foods in a list
+      cursor.flatMap(_.collect[List](count, Cursor.FailOnError[List[Food]]()))
+    }
 
-    override def findOne(id: Int): Option[Food] = 
-        collection.flatMap(_.find(Json.obj("id" -> id)).one[Food])
+    override def findOne(id: String): Future[Option[Food]] = {
+        collection.flatMap(_.find(BSONDocument("id" -> id)).one[Food])
+    }
 
-    override def updateOne(id: Int): Either[NotFound, Unit] =
-        collection.flatMap(_.update.one(q = BSONDocument("id" -> id), u = food, upsert = false, multi = false))
+    override def createOne(newFood: FoodWithoutId): Future[Food] = {
+      val insertedFood = Food(BSONObjectID.generate().stringify, newFood.name)
+      collection.flatMap(_.insert.one(insertedFood)).map { _ => insertedFood }
+    }
+
+    override def deleteOne(id: String): Future[Option[Unit]] = {
+      collection.flatMap(_.delete.one(idSelector(id)))
+        .map(verifyUpdateOneDocument)
+    }
+
+    override def updateOne(id: String, newFood: FoodWithoutId): Future[Option[Unit]] = {
+          val updatedFood = Food(id, newFood.name)
+          collection.flatMap(_.update.one(q = idSelector(id), u = updatedFood, upsert = false, multi = false))
+              .map (verifyUpdateOneDocument)
+    }
+
+  def idSelector (id: String) = BSONDocument("id" -> id)
+
+  def verifyUpdateOneDocument (writeResult: WriteResult): Option[Unit] =
+    if (writeResult.n == 1 && writeResult.ok) Some() else None
 }
