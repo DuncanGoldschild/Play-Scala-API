@@ -3,8 +3,6 @@
 # https://www.playframework.com/documentation/latest/ScalaRouting
 # ~~~~
 
-# An example controller showing a sample home page
-GET     /                           controllers.FoodController.index
 
 #Read all
 GET     /foods                      controllers.FoodController.listFood
@@ -13,13 +11,13 @@ GET     /foods                      controllers.FoodController.listFood
 POST    /foods                      controllers.FoodController.newFood
 
 #Read one
-GET     /food/:id                   controllers.FoodController.findById(id : Int)
+GET     /food/:id                   controllers.FoodController.findById(id : String)
 
 #Delete one
-DELETE  /food/:id                   controllers.FoodController.deleteFood(id : Int)
+DELETE  /food/:id                   controllers.FoodController.deleteFood(id : String)
 
 #Update one
-PUT     /food/:id                   controllers.FoodController.updateFood(id : Int)
+PUT     /food/:id                   controllers.FoodController.updateFood(id : String)
 
 
 

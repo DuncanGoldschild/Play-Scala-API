@@ -1,30 +1,25 @@
 package controllers
 
 
-import scala.collection.mutable._
-import javax.inject._
-import scala.util.{ Failure, Success }
 import scala.concurrent._
+import scala.collection.Seq
+
+import javax.inject._
+
 import ExecutionContext.Implicits.global
 
-import reactivemongo.api.Cursor
-import reactivemongo.api.ReadPreference
-import reactivemongo.bson._
-import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.play.json._, collection._
+import reactivemongo.play.json._
 
-import play.modules.reactivemongo.{ // ReactiveMongo Play2 plugin
-  MongoController,
-  ReactiveMongoApi,
-  ReactiveMongoComponents
-}
-
-import play.api._
 import play.api.mvc._
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
+import play.api.Logger
 
 import com.google.inject.Singleton
+
+import repositories.MongoFoodRepository
+
+import models.FoodWithoutId
+
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -33,108 +28,76 @@ import com.google.inject.Singleton
 @Singleton
 class FoodController @Inject() (
   components: ControllerComponents,
-  val reactiveMongoApi: ReactiveMongoApi
-) extends AbstractController(components)
-  with MongoController with ReactiveMongoComponents {
+  foodRepository: MongoFoodRepository
+) extends AbstractController(components) {
 
-case class Food(id : Int, name : String)
-
-  def collection: Future[BSONCollection] =
-    database.map(_.collection[BSONCollection]("food"))
-    
-
-implicit object FoodWriter extends BSONDocumentWriter[Food] {
-  def write(food: Food): BSONDocument =
-    BSONDocument("id" -> food.id, "name" -> food.name)
-}
-
-implicit object FoodReader extends BSONDocumentReader[Food] {
-  def read(bson: BSONDocument): Food = {
-    val opt: Option[Food] = for {
-      name <- bson.getAs[String]("name")
-      id <- bson.getAs[BSONNumberLike]("id").map(_.toInt)
-    } yield new Food(id, name)
-
-    opt.get // the person is required (or let throw an exception)
-  }
-}
-
-  implicit val foodWrites = Json.writes[Food] 
-  implicit val foodReads = Json.reads[Food] 
+  private val logger = Logger(this.getClass)
 
 // Display the Food by its id with GET /food/"id"
-  def findById(id: Int) = Action.async {
-  collection.flatMap(_.find(Json.obj("id" -> id)).one[Food]).map{ 
-    case Some(p) => Ok(Json.toJson(p))
-    case None    => NotFound
-  }.recover{ case t: Throwable =>
-    throw (t)
-    } 
+  def findById(id: String): Action[AnyContent] = Action.async {
+  foodRepository.findOne(id)
+    .map{
+      case Some(food) => Ok(Json.toJson(food))
+      case None => NotFound
+    }.recover(logAndInternalServerError)
   }
 
   // Display all Food elements with GET /foods
-  def listFood = Action.async {
-    val cursor: Future[Cursor[BSONDocument]] = collection.map {
-      _.find(BSONDocument()).
-        // perform the query and get a cursor of BSONDocument
-        cursor[BSONDocument](ReadPreference.primary)
-    }
-  
-    // gather all the BSONDocuments in a list
-    val futureFoodsList: Future[List[BSONDocument]] =
-      cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[BSONDocument]]()))
-
-    futureFoodsList.map { 
-      case food => Ok(Json.toJson(food))
-      case _ => NotFound
-    }.recover{ case t: Throwable =>
-    throw (t)
-      } 
+  def listFood: Action[AnyContent] = Action.async {
+    foodRepository.listAll.map{
+      list => Ok(Json.toJson(list))
+    }.recover(logAndInternalServerError)
   }
 
   // Delete with DELETE /food/"id"
-  def deleteFood(id : Int) =  Action.async {
-    val selector1 = BSONDocument("id" -> id)
-    val futureRemove1 = collection.flatMap(_.delete.one(selector1))
-
-    futureRemove1.map{
-      res => if (res.ok && res.n == 1) NoContent else NotFound
-    }.recover{ case t: Throwable =>
-        throw (t)
-      } 
+  def deleteFood(id : String): Action[AnyContent] =  Action.async {
+    foodRepository.deleteOne(id)
+    .map{
+      case Some(_) => NoContent
+      case None => NotFound
+    }.recover(logAndInternalServerError)
   }
-  
-  // TODO : delete id of Food and use mongodb's provided one => recherche par ordre d'insertion ?
+
   // Add with POST /foods
-  def newFood = Action(parse.json) { request =>
-      val foodResult = request.body.validate[Food]
+  def newFood: Action[JsValue] = Action.async(parse.json) { request =>
+      val foodResult = request.body.validate[FoodWithoutId]
       foodResult.fold(
         errors => {
-          BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+          badRequest(errors)
         },
         food => {
-            collection.flatMap(_.insert.one(food))
-            Created
+            foodRepository.createOne(food).map{
+              createdFood => Ok(Json.toJson(createdFood))
+            }.recover(logAndInternalServerError)
         }
       )
   } 
 
   // Update with PUT /food/"id"
-  def updateFood(id : Int) = Action(parse.json) { request =>
-    val foodResult = request.body.validate[Food]
+  def updateFood(id : String): Action[JsValue] = Action.async(parse.json) { request =>
+    val foodResult = request.body.validate[FoodWithoutId]
     foodResult.fold(
       errors => {
-        BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+        badRequest(errors)
       },
       food => {
-          collection.flatMap(_.update.one(q = BSONDocument("id" -> id), u = food, upsert = false, multi = false))
-          NoContent
+          foodRepository.updateOne(id,food)
+            .map {
+              case Some(_) => NoContent
+              case None => NotFound
+            }.recover(logAndInternalServerError)
       }
     )
   }
 
-  // Home
-  def index() = Action { implicit request: Request[AnyContent] =>
-    Ok(views.html.index())
-  }  
+  private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
+    Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+  }
+
+  private def logAndInternalServerError: PartialFunction[Throwable, Result] = {
+    case e : Throwable =>
+      logger.error(e.getMessage, e)
+      InternalServerError
+
+  }
 }
