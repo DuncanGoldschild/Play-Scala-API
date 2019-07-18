@@ -4,11 +4,6 @@ import reactivemongo.bson._
 import play.api.libs.json._
 
 case class FoodWithoutId(name : String)
-case class Food(id : String, name: String)
-
-case class Column(id : String, label: String, taskList : List[Task])
-
-
 object FoodWithoutId {
 
   implicit object FoodWithoutIdReader extends BSONDocumentReader[FoodWithoutId] {
@@ -16,13 +11,14 @@ object FoodWithoutId {
       val opt: Option[FoodWithoutId] = for {
         name <- bson.getAs[String]("name")
       } yield new FoodWithoutId(name)
-      opt.get // the person is required (or let throw an exception)
+      opt.get // the Food is required (or let throw an exception)
     }
   }
 
   implicit val foodWithoutIdReads: Reads[FoodWithoutId] = Json.reads[FoodWithoutId]
 }
 
+case class Food(id : String, name: String)
 object Food {
 
   implicit object FoodWriter extends BSONDocumentWriter[Food] {
@@ -36,7 +32,7 @@ object Food {
         name <- bson.getAs[String]("name")
         id <- bson.getAs[String]("id")
       } yield new Food(id, name)
-      opt.get // the person is required (or let throw an exception)
+      opt.get // the Food is required (or let throw an exception)
     }
   }
 

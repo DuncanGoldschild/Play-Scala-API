@@ -11,16 +11,15 @@ import reactivemongo.api.commands.{UpdateWriteResult, WriteResult}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
-import exception.{NotFoundResourceException, TechnicalDBException}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Success, Try}
+
 
 sealed trait FoodRepository {
 
     def listAll: Future[List[Food]]
 
-    def listAll(count: Int): Future[List[Food]] // cf pagination
+    def listAll(count: Int): Future[List[Food]]
 
     def findOne(id: String): Future[Option[Food]]
 
@@ -69,17 +68,17 @@ class MongoFoodRepository @Inject() (
 
     override def deleteOne(id: String): Future[Option[Unit]] = {
       collection.flatMap(_.delete.one(idSelector(id)))
-        .map(verifyUpdateOneDocument)
+        .map(verifyUpdatedOneDocument)
     }
 
     override def updateOne(id: String, newFood: FoodWithoutId): Future[Option[Unit]] = {
           val updatedFood = Food(id, newFood.name)
           collection.flatMap(_.update.one(q = idSelector(id), u = updatedFood, upsert = false, multi = false))
-              .map (verifyUpdateOneDocument)
+              .map (verifyUpdatedOneDocument)
     }
 
   def idSelector (id: String) = BSONDocument("id" -> id)
 
-  def verifyUpdateOneDocument (writeResult: WriteResult): Option[Unit] =
+  def verifyUpdatedOneDocument(writeResult: WriteResult): Option[Unit] =
     if (writeResult.n == 1 && writeResult.ok) Some() else None
 }
