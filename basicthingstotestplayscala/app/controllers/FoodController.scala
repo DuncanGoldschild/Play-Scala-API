@@ -1,20 +1,25 @@
 package controllers
 
-import javax.inject._
 
 import scala.concurrent._
+import scala.collection.Seq
+
+import javax.inject._
+
 import ExecutionContext.Implicits.global
-import reactivemongo.api.Cursor
-import reactivemongo.api.ReadPreference
-import reactivemongo.bson._
+
 import reactivemongo.play.json._
-import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
+
 import play.api.mvc._
 import play.api.libs.json._
-import com.google.inject.Singleton
-import models.{Food, FoodWithoutId}
 import play.api.Logger
+
+import com.google.inject.Singleton
+
 import repositories.MongoFoodRepository
+
+import models.FoodWithoutId
+
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -58,7 +63,7 @@ class FoodController @Inject() (
       val foodResult = request.body.validate[FoodWithoutId]
       foodResult.fold(
         errors => {
-          Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+          badRequest(errors)
         },
         food => {
             foodRepository.createOne(food).map{
@@ -73,7 +78,7 @@ class FoodController @Inject() (
     val foodResult = request.body.validate[FoodWithoutId]
     foodResult.fold(
       errors => {
-        Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+        badRequest(errors)
       },
       food => {
           foodRepository.updateOne(id,food)
@@ -85,11 +90,11 @@ class FoodController @Inject() (
     )
   }
 
-  private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]) : Result = {
-    BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors)))
+  private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
+    Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
   }
 
-  private def logAndInternalServerError : PartialFunction[Throwable, Result] = {
+  private def logAndInternalServerError: PartialFunction[Throwable, Result] = {
     case e : Throwable =>
       logger.error(e.getMessage, e)
       InternalServerError

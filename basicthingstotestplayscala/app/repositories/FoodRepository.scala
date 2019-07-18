@@ -1,18 +1,20 @@
 package repositories
 
-import models.{Food, FoodWithoutId}
-import play.api.mvc._
+import scala.concurrent._
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import javax.inject._
 
-import scala.concurrent._
-import reactivemongo.api.Cursor
-import reactivemongo.api.ReadPreference
-import reactivemongo.api.commands.{UpdateWriteResult, WriteResult}
-import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import reactivemongo.api.Cursor
+import reactivemongo.api.ReadPreference
+import reactivemongo.api.commands.{WriteResult}
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+
+import models.{Food, FoodWithoutId}
 
 
 sealed trait FoodRepository {
@@ -35,18 +37,15 @@ class MongoFoodRepository @Inject() (
     components: ControllerComponents,
     val reactiveMongoApi: ReactiveMongoApi
   ) extends AbstractController(components)
-    with MongoController with ReactiveMongoComponents with FoodRepository {
+      with MongoController
+      with ReactiveMongoComponents
+      with FoodRepository {
 
     def collection: Future[BSONCollection] =
         database.map(_.collection[BSONCollection]("food"))
 
     override def listAll : Future[List[Food]] = {
-        val cursor: Future[Cursor[Food]] = collection.map {
-        _.find(BSONDocument()).cursor[Food](ReadPreference.primary)
-         }   
-        // gather all the Foods in a list
-        cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[Food]]())
-        )
+      listAll(-1)
     }
          
     override def listAll(count: Int): Future[List[Food]] = {
@@ -58,7 +57,7 @@ class MongoFoodRepository @Inject() (
     }
 
     override def findOne(id: String): Future[Option[Food]] = {
-        collection.flatMap(_.find(BSONDocument("id" -> id)).one[Food])
+        collection.flatMap(_.find(idSelector(id)).one[Food])
     }
 
     override def createOne(newFood: FoodWithoutId): Future[Food] = {
@@ -72,9 +71,9 @@ class MongoFoodRepository @Inject() (
     }
 
     override def updateOne(id: String, newFood: FoodWithoutId): Future[Option[Unit]] = {
-          val updatedFood = Food(id, newFood.name)
-          collection.flatMap(_.update.one(q = idSelector(id), u = updatedFood, upsert = false, multi = false))
-              .map (verifyUpdatedOneDocument)
+      val updatedFood = Food(id, newFood.name)
+      collection.flatMap(_.update.one(q = idSelector(id), u = updatedFood, upsert = false, multi = false))
+        .map (verifyUpdatedOneDocument)
     }
 
   def idSelector (id: String) = BSONDocument("id" -> id)
