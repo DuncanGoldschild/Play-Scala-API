@@ -8,7 +8,6 @@ case class FoodWithoutId(name : String)
 
 object FoodWithoutId {
 
-  implicit val foodWithoutIdReader: BSONDocumentReader[FoodWithoutId] = Macros.reader[FoodWithoutId]
   implicit val foodWithoutIdReads: Reads[FoodWithoutId] = Json.reads[FoodWithoutId]
 
 }

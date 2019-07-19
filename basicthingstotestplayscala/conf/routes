@@ -21,6 +21,36 @@ PUT     /food/:id                   controllers.FoodController.updateFood(id : S
 
 
 
+#Trello Routing
+
+#Board Requests
+GET     /boards                     controllers.BoardController.allBoards
+POST    /boards                     controllers.BoardController.createNewBoard
+GET     /board/:id                  controllers.BoardController.findBoardById(id : String)
+PUT     /board/:id                  controllers.BoardController.updateBoard(id : String)
+DELETE  /board/:id                  controllers.BoardController.deleteBoard(id : String)
+
+#List Request
+GET     /lists                      controllers.ListTaskController.allListTasks
+POST    /lists                      controllers.ListTaskController.createNewListTask
+GET     /list/:id                   controllers.ListTaskController.findListTaskById(id : String)
+PUT     /list/:id                   controllers.ListTaskController.updateListTask(id : String)
+DELETE  /list/:id                   controllers.ListTaskController.deleteListTask(id : String)
+
+#Task Request
+GET     /tasks                      controllers.TaskController.allTasks
+POST    /tasks                      controllers.TaskController.createNewTask
+GET     /task/:id                   controllers.TaskController.findTaskById(id : String)
+PUT     /task/:id                   controllers.TaskController.updateTask(id : String)
+DELETE  /task/:id                   controllers.TaskController.deleteTask(id : String)
+
+#Member Request
+GET     /members                    controllers.MemberController.allMembers
+POST    /members                    controllers.MemberController.createNewMember
+GET     /member/:username           controllers.MemberController.findMemberById(username : String)
+PUT     /member/:username           controllers.MemberController.updateMember(username : String)
+DELETE  /member/:username           controllers.MemberController.deleteMember(username : String)
+
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
