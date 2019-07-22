@@ -2,16 +2,13 @@ package repositories
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import javax.inject._
-
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
-
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONObjectID}
-
+import reactivemongo.bson.BSONObjectID
 import models.{Task, TaskCreationRequest}
+
 
 
 class MongoTaskRepository @Inject() (
@@ -37,4 +34,17 @@ class MongoTaskRepository @Inject() (
       .map (verifyUpdatedOneDocument)
   }
 
+  def findOne(id: String): Future[Option[Task]] = {
+    collection.flatMap(_.find(idSelector(id)).one[Task])
+  }
+  override def deleteOne(id: String): Future[Option[Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) => if (task.archived) {
+          collection.flatMap(_.delete.one(idSelector(id)))
+            .map(verifyUpdatedOneDocument)
+        } else Future.successful(None)
+        case None => Future.successful(None)
+    }
+  }
 }

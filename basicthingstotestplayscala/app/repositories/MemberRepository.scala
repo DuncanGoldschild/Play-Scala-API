@@ -8,6 +8,7 @@ import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMo
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import models.{Member, MemberCreationRequest}
+import reactivemongo.api.commands.WriteResult
 
 
 class MongoMemberRepository @Inject() (
@@ -23,13 +24,15 @@ class MongoMemberRepository @Inject() (
 
   def createOne(newMember: MemberCreationRequest): Future[Option[Member]] = {
     val insertedMember = Member(newMember.username, newMember.password, newMember.boardsId, newMember.tasksId)
-    findOne(newMember.username).map{
-      case None => {
-        val futureMember = collection.flatMap(_.insert.one(insertedMember))
-        Some(insertedMember)
+    findOne(newMember.username)
+      .flatMap{ // checking if the username is already existing
+        case None => {
+          collection.flatMap(_.insert.one(insertedMember)).map{
+            _ => Some(insertedMember)
+          }
+        }
+        case Some(_) => Future.successful(None)
       }
-      case Some(_) => None
-    }
   }
 
   override def deleteOne(username: String): Future[Option[Unit]] = {
