@@ -3,22 +3,19 @@ package controllers
 
 import scala.concurrent._
 import scala.collection.Seq
-
 import javax.inject._
 
 import ExecutionContext.Implicits.global
-
 import reactivemongo.play.json._
-
 import play.api.mvc._
 import play.api.libs.json._
 import play.api.Logger
-
 import com.google.inject.Singleton
+import repositories.{MongoBoardRepository, MongoMemberRepository}
+import services.JwtTokenGenerator
+import models.{Board, BoardCreationRequest, Member}
 
-import repositories.MongoBoardRepository
-
-import models.BoardCreationRequest
+import scala.util.Success
 
 
 /**
@@ -28,18 +25,32 @@ import models.BoardCreationRequest
 @Singleton
 class BoardController @Inject() (
                                  components: ControllerComponents,
-                                 boardRepository: MongoBoardRepository
+                                 boardRepository: MongoBoardRepository,
+                                 memberRepository: MongoMemberRepository,
+                                 jwtService : JwtTokenGenerator
                                ) extends AbstractController(components) {
 
   private val logger = Logger(this.getClass)
 
   // Display the board by its id with GET /board/"id"
-  def findBoardById(id: String): Action[AnyContent] = Action.async {
-    boardRepository.findOne(id)
-      .map{
-        case Some(board) => Ok(Json.toJson(board))
-        case None => NotFound
-      }.recover(logAndInternalServerError)
+  def findBoardById(id: String): Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
+    request.headers.get("Authorization") match {
+      case Some(token : String) => {
+        jwtService.verifyToken(token) match{
+          case Success(tryToken) => tryToken match {
+            case (header,payload,signature) => memberRepository.findByUsername(jwtService.fetchPayload(token)).flatMap{ // TODO : get payload username
+              case Some(member : Member) => if (member.boardsId.contains(id)) boardRepository.findOne(id)
+                .map{
+                  case Some(board) => Ok(Json.toJson(board))
+                  case None => NotFound
+                } else Future.successful(Unauthorized)
+              case None => Future.successful(Unauthorized)
+            }.recover(logAndInternalServerError)
+          }
+        }
+      } // handle token auth
+      case None => Future.successful(Unauthorized)
+    }
   }
 
   // Display all board elements with GET /boards

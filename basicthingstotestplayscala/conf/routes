@@ -50,7 +50,7 @@ POST    /members                    controllers.MemberController.createNewMember
 GET     /member/:username           controllers.MemberController.findMemberById(username : String)
 PUT     /member/:username           controllers.MemberController.updateMember(username : String)
 DELETE  /member/:username           controllers.MemberController.deleteMember(username : String)
-
+POST    /members/auth               controllers.MemberController.authMember
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

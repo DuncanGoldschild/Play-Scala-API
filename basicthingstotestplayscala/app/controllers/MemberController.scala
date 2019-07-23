@@ -17,8 +17,8 @@ import play.api.Logger
 import com.google.inject.Singleton
 
 import repositories.MongoMemberRepository
-
-import models.MemberCreationRequest
+import services.JwtTokenGenerator
+import models.{MemberCreationRequest, MemberAuth}
 
 
 /**
@@ -28,7 +28,8 @@ import models.MemberCreationRequest
 @Singleton
 class MemberController @Inject() (
                                   components: ControllerComponents,
-                                  memberRepository: MongoMemberRepository
+                                  memberRepository: MongoMemberRepository,
+                                  jwtService : JwtTokenGenerator
                                 ) extends AbstractController(components) {
 
   private val logger = Logger(this.getClass)
@@ -40,6 +41,21 @@ class MemberController @Inject() (
         case Some(member) => Ok(Json.toJson(member))
         case None => NotFound
       }.recover(logAndInternalServerError)
+  }
+
+  def authMember : Action[JsValue] = Action.async(parse.json) { request =>
+    val memberResult = request.body.validate[MemberAuth]
+    memberResult.fold(
+      errors => {
+        badRequest(errors)
+      },
+      memberAuth => {
+        memberRepository.findUser(memberAuth).map{
+          case Some(createdMember) => Ok(Json.toJson(jwtService.generateToken(createdMember.username)))
+          case None => NotFound
+        }.recover(logAndInternalServerError)
+      }
+    )
   }
 
   // Display all Member elements with GET /Members

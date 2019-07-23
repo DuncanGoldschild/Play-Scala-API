@@ -75,3 +75,10 @@ object MemberCreationRequest{
   implicit val MemberCreationRequestReads: Reads[MemberCreationRequest] = Json.reads[MemberCreationRequest]
   implicit val memberWriter: BSONDocumentWriter[MemberCreationRequest] = Macros.writer[MemberCreationRequest]
 }
+
+case class MemberAuth (username: String, password: String) // Members auth
+object MemberAuth{
+
+  implicit val memberAuthReads: Reads[MemberAuth] = Json.reads[MemberAuth]
+  implicit val memberAuthWriter: BSONDocumentWriter[MemberAuth] = Macros.writer[MemberAuth]
+}

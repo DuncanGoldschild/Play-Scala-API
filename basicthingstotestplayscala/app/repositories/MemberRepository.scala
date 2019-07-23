@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import models.{Member, MemberCreationRequest}
+import models.{Member, MemberAuth, MemberCreationRequest}
 import reactivemongo.api.commands.WriteResult
 
 
@@ -46,5 +46,12 @@ class MongoMemberRepository @Inject() (
       .map (verifyUpdatedOneDocument)
   }
 
+  def findUser (memberAuth : MemberAuth) : Future[Option[Member]] = {
+      collection.flatMap(_.find(BSONDocument("username" -> memberAuth.username, "password" -> memberAuth.password)).one[Member])
+  }
+
+  def findByUsername(username: String): Future[Option[Member]] = {
+    collection.flatMap(_.find(idSelector(username)).one[Member])
+  }
   override def idSelector (username: String) = BSONDocument("username" -> username)
 }
