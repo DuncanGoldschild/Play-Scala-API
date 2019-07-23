@@ -115,6 +115,5 @@ class MemberController @Inject() (
     case e : Throwable =>
       logger.error(e.getMessage, e)
       InternalServerError
-
   }
 }

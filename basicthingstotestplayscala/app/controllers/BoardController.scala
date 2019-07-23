@@ -15,7 +15,7 @@ import repositories.{MongoBoardRepository, MongoMemberRepository}
 import services.JwtTokenGenerator
 import models.{Board, BoardCreationRequest, Member}
 
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 
 /**
@@ -32,13 +32,31 @@ class BoardController @Inject() (
 
   private val logger = Logger(this.getClass)
 
+  /*private def verifyUserPermissionsFromRequest (request : Request[JsValue], idBoard : String) = {
+    request.headers.get("Authorization") match {
+      case Some(token : String) => {
+        jwtService.verifyToken(token) match{
+          case Success(_) =>  memberRepository.findByUsername(jwtService.fetchPayload(token))
+            .flatMap{
+              case Some(member : Member) =>
+                if (member.boardsId.contains(idBoard)) boardRepository.findOne(idBoard)
+                else Future.successful(Unauthorized)
+              case None => Future.successful(Unauthorized)
+            }.recover(logAndInternalServerError)
+          case Failure(_) => Future.successful(InternalServerError)
+        }
+      } // handle token auth
+      case None => Future.successful(Unauthorized)
+    }
+  }*/ //TODO : verif user permissions for read, update, delete
+
   // Display the board by its id with GET /board/"id"
   def findBoardById(id: String): Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
     request.headers.get("Authorization") match {
       case Some(token : String) => {
         jwtService.verifyToken(token) match{
-          case Success(tryToken) => tryToken match {
-            case (header,payload,signature) => memberRepository.findByUsername(jwtService.fetchPayload(token)).flatMap{ // TODO : get payload username
+          case Success(_) =>  memberRepository.findByUsername(jwtService.fetchPayload(token))
+            .flatMap{
               case Some(member : Member) => if (member.boardsId.contains(id)) boardRepository.findOne(id)
                 .map{
                   case Some(board) => Ok(Json.toJson(board))
@@ -46,7 +64,7 @@ class BoardController @Inject() (
                 } else Future.successful(Unauthorized)
               case None => Future.successful(Unauthorized)
             }.recover(logAndInternalServerError)
-          }
+          case Failure(_) => Future.successful(InternalServerError)
         }
       } // handle token auth
       case None => Future.successful(Unauthorized)

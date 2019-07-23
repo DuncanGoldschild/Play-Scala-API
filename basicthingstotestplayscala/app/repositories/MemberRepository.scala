@@ -46,7 +46,7 @@ class MongoMemberRepository @Inject() (
       .map (verifyUpdatedOneDocument)
   }
 
-  def findUser (memberAuth : MemberAuth) : Future[Option[Member]] = {
+  def findUser (memberAuth : MemberAuth): Future[Option[Member]] = {
       collection.flatMap(_.find(BSONDocument("username" -> memberAuth.username, "password" -> memberAuth.password)).one[Member])
   }
 

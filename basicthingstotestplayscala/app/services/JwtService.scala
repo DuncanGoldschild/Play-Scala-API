@@ -20,6 +20,7 @@ class JwtTokenGenerator extends JwtTokenGeneratorServices {
   val secret = ConfigFactory.load(conf).getString("play.crypto.secret")
 
   override def generateToken(u : String): String = Jwt.encode(s"""{ "username" : "$u" }""", secret, JwtAlgorithm.HS256)
+
   override def verifyToken(token : String): Try[(String,String,String)] = Jwt.decodeRawAll(token, secret, Seq(JwtAlgorithm.HS256))
 
   override def fetchPayload(token: String): String = {
@@ -28,7 +29,6 @@ class JwtTokenGenerator extends JwtTokenGeneratorServices {
         println(x)
         Json.parse(x.content).get("username").asText
       }
-      case Failure(e) => "Failed"
     }
   }
 }
