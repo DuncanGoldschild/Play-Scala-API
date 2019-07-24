@@ -24,6 +24,14 @@ trait GlobalRepository {
       cursor.flatMap(_.collect[List](count, Cursor.FailOnError[List[A]]()))
   }
 
+  def listAllFromIds [A : BSONDocumentReader](boardIds: Seq[String]): Future[List[A]] = {
+    val cursor: Future[Cursor[A]] = collection.map {
+      _.find(BSONDocument("id" -> BSONDocument("$in" -> boardIds) )).cursor[A](ReadPreference.primary)
+    }
+    // gather all the Boards in a list
+    cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[A]]()))
+  }
+
   def findOne[A : BSONDocumentReader](id: String): Future[Option[A]] = {
     collection.flatMap(_.find(idSelector(id)).one[A])
   }

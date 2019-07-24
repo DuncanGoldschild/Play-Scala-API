@@ -30,7 +30,6 @@ class MongoBoardRepository @Inject() (
     collection.flatMap(_.insert.one(insertedBoard)).map { _ => insertedBoard }
   }
 
-
   def updateOne (id: String, newBoard: BoardCreationRequest): Future[Option[Unit]] = {
     val updatedBoard = Board(id, newBoard.label)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedBoard, upsert = false, multi = false))

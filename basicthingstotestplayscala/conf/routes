@@ -24,7 +24,7 @@ PUT     /food/:id                   controllers.FoodController.updateFood(id : S
 #Trello Routing
 
 #Board Requests
-GET     /boards                     controllers.BoardController.allBoards
+GET     /boards                     controllers.BoardController.allUserBoards
 POST    /boards                     controllers.BoardController.createNewBoard
 GET     /board/:id                  controllers.BoardController.findBoardById(id : String)
 PUT     /board/:id                  controllers.BoardController.updateBoard(id : String)
