@@ -4,7 +4,7 @@ import play.api.libs.json.{Json, Reads, Writes}
 
 import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, Macros}
 
-case class Board (id: String, label: String)
+case class Board (id: String, label: String, membersUsername: Seq[String])
 object Board {
 
   implicit val boardReader: BSONDocumentReader[Board] = Macros.reader[Board]
@@ -22,7 +22,14 @@ object BoardCreationRequest{
 
 }
 
-case class ListTask (id: String, label: String, boardId: String)
+case class BoardUpdateRequest (label: String, membersUsername: Seq[String])
+object BoardUpdateRequest{
+
+  implicit val boardCreationRequestReads: Reads[BoardUpdateRequest] = Json.reads[BoardUpdateRequest]
+
+}
+
+case class ListTask (id: String, label: String, boardId: String, membersUsername: Seq[String])
 object ListTask {
 
   implicit val listReader: BSONDocumentReader[ListTask] = Macros.reader[ListTask]
@@ -40,7 +47,14 @@ object ListTaskCreationRequest{
 
 }
 
-case class Task (id: String, label: String, description: String, archived : Boolean, listId: String)
+case class ListTaskUpdateRequest (label: String, boardId: String, membersUsername: Seq[String])
+object ListTaskUpdateRequest{
+
+  implicit val listUpdateRequestReads: Reads[ListTaskUpdateRequest] = Json.reads[ListTaskUpdateRequest]
+
+}
+
+case class Task (id: String, label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
 object Task {
 
   implicit val taskReader: BSONDocumentReader[Task] = Macros.reader[Task]
@@ -58,7 +72,14 @@ object TaskCreationRequest{
 
 }
 
-case class Member (username: String, password: String, boardsId: Seq[String], tasksId: Seq[String])
+case class TaskUpdateRequest (label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
+object TaskUpdateRequest{
+
+  implicit val listUpdateRequestReads: Reads[TaskUpdateRequest] = Json.reads[TaskUpdateRequest]
+
+}
+
+case class Member (username: String, password: String)
 object Member {
 
   implicit val memberReader: BSONDocumentReader[Member] = Macros.reader[Member]
@@ -67,18 +88,4 @@ object Member {
   implicit val memberWrites: Writes[Member] = Json.writes[Member]
   implicit val memberReads: Reads[Member] = Json.reads[Member]
 
-}
-
-case class MemberCreationRequest (username: String, password: String, boardsId: Seq[String], tasksId: Seq[String]) // Members creation
-object MemberCreationRequest{
-
-  implicit val MemberCreationRequestReads: Reads[MemberCreationRequest] = Json.reads[MemberCreationRequest]
-  implicit val memberWriter: BSONDocumentWriter[MemberCreationRequest] = Macros.writer[MemberCreationRequest]
-}
-
-case class MemberAuth (username: String, password: String) // Members auth
-object MemberAuth{
-
-  implicit val memberAuthReads: Reads[MemberAuth] = Json.reads[MemberAuth]
-  implicit val memberAuthWriter: BSONDocumentWriter[MemberAuth] = Macros.writer[MemberAuth]
 }

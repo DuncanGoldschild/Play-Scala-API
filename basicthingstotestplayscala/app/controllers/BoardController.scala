@@ -13,7 +13,7 @@ import play.api.Logger
 import com.google.inject.Singleton
 import repositories.{MongoBoardRepository, MongoMemberRepository}
 import services.JwtTokenGenerator
-import models.{Board, BoardCreationRequest, Member}
+import models.{Board, BoardCreationRequest, BoardUpdateRequest, Member}
 
 import scala.util.{Failure, Success}
 
@@ -32,51 +32,62 @@ class BoardController @Inject() (
 
   private val logger = Logger(this.getClass)
 
-  private def verifyPermissionsAndGetUserFromRequest (request : Request[JsValue]): Future[Option[Member]] = {
+  // Display the board by its id with GET /board/"id"
+  def findBoardById(id: String): Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
     request.headers.get("Authorization") match {
       case Some(token : String) => {
         jwtService.verifyToken(token) match{
-          case Success(_) =>  memberRepository.findByUsername(jwtService.fetchPayload(token))
-          case Failure(_) => Future.successful(None)
-        }
-      } // handle token auth
-      case None => Future.successful(None)
-    }
-  }
-
-  // Display the board by its id with GET /board/"id"
-  def findBoardById(id: String): Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
-    verifyPermissionsAndGetUserFromRequest(request)
+          case Success(_) =>  boardRepository.findOne(id)
             .flatMap{
-              case Some(member : Member) => if (member.boardsId.contains(id)) boardRepository.findOne(id)
-                .map{
-                  case Some(board) => Ok(Json.toJson(board))
-                  case None => NotFound
-                } else Future.successful(Unauthorized)
+              case Some(board : Board) =>
+                if (board.membersUsername.contains(jwtService.fetchPayload(token))) Future.successful(Ok(Json.toJson(board)))
+                else Future.successful(NotFound)
               case None => Future.successful(Unauthorized)
             }.recover(logAndInternalServerError)
-
+          case Failure(_) => Future.successful(Unauthorized)
+        }
+      } // handle token auth
+      case None => Future.successful(Unauthorized)
+    }
   }
 
   // Display all board elements with GET /boards
   def allUserBoards: Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
-    verifyPermissionsAndGetUserFromRequest(request)
-      .flatMap{
-        case Some(member : Member) => boardRepository.listAllFromIds(member.boardsId)
-          .map{
-            list => Ok(Json.toJson(list))
-          }
-        case None => Future.successful(Unauthorized)
-      }.recover(logAndInternalServerError)
+    request.headers.get("Authorization") match {
+      case Some(token : String) => {
+        jwtService.verifyToken(token) match{
+          case Success(_) =>  boardRepository.listAllFromUsername(jwtService.fetchPayload(token))
+            .map{
+               list => Ok(Json.toJson(list))
+                }.recover(logAndInternalServerError)
+          case Failure(_) => Future.successful(Unauthorized)
+        }
+      }
+      case None => Future.successful(Unauthorized)
+    }
   }
 
   // Delete with DELETE /board/"id"
-  def deleteBoard(id : String): Action[AnyContent] =  Action.async {
-    boardRepository.deleteOne(id)
-      .map{
-        case Some(_) => NoContent
-        case None => NotFound
-      }.recover(logAndInternalServerError)
+  def deleteBoard(id : String): Action[JsValue] =  Action.async(parse.json) { request : Request[JsValue] =>
+    request.headers.get("Authorization") match {
+      case Some(token : String) => {
+        jwtService.verifyToken(token) match{
+          case Success(_) =>  boardRepository.findOne(id)
+            .flatMap{
+              case Some(board : Board) =>
+                if (board.membersUsername.contains(jwtService.fetchPayload(token))) boardRepository.deleteOne(id)
+                  .map{
+                    case Some(_) => NoContent
+                    case None => NotFound
+                  }.recover(logAndInternalServerError)
+                else Future.successful(NotFound)
+              case None => Future.successful(Unauthorized)
+            }.recover(logAndInternalServerError)
+          case Failure(_) => Future.successful(Unauthorized)
+        }
+      } // handle token auth
+      case None => Future.successful(Unauthorized)
+    }
   }
 
   // Add with POST /boards
@@ -87,7 +98,7 @@ class BoardController @Inject() (
         badRequest(errors)
       },
       board => {
-        boardRepository.createOne(board).map{
+        boardRepository.createOne(board, "JeanMich").map{ // TODO : username request
           createdBoard => Ok(Json.toJson(createdBoard))
         }.recover(logAndInternalServerError)
       }
@@ -96,7 +107,7 @@ class BoardController @Inject() (
 
   // Update with PUT /board/"id"
   def updateBoard(id : String): Action[JsValue] = Action.async(parse.json) { request =>
-    val boardResult = request.body.validate[BoardCreationRequest]
+    val boardResult = request.body.validate[BoardUpdateRequest]
     boardResult.fold(
       errors => {
         badRequest(errors)

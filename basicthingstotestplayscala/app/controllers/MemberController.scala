@@ -18,7 +18,7 @@ import com.google.inject.Singleton
 
 import repositories.MongoMemberRepository
 import services.JwtTokenGenerator
-import models.{MemberCreationRequest, MemberAuth}
+import models.Member
 
 
 /**
@@ -44,7 +44,7 @@ class MemberController @Inject() (
   }
 
   def authMember : Action[JsValue] = Action.async(parse.json) { request =>
-    val memberResult = request.body.validate[MemberAuth]
+    val memberResult = request.body.validate[Member]
     memberResult.fold(
       errors => {
         badRequest(errors)
@@ -76,7 +76,7 @@ class MemberController @Inject() (
 
   // Add with POST /Members
   def createNewMember: Action[JsValue] = Action.async(parse.json) { request =>
-    val memberResult = request.body.validate[MemberCreationRequest]
+    val memberResult = request.body.validate[Member]
     memberResult.fold(
       errors => {
         badRequest(errors)
@@ -92,7 +92,7 @@ class MemberController @Inject() (
 
   // Update with PUT /Member/"id"
   def updateMember(username : String): Action[JsValue] = Action.async(parse.json) { request =>
-    val memberResult = request.body.validate[MemberCreationRequest]
+    val memberResult = request.body.validate[Member]
     memberResult.fold(
       errors => {
         badRequest(errors)

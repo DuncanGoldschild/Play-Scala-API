@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
-import models.{Task, TaskCreationRequest}
+import models.{Task, TaskCreationRequest, TaskUpdateRequest}
 
 
 
@@ -22,14 +22,14 @@ class MongoTaskRepository @Inject() (
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("task"))
 
-  def createOne(newTask: TaskCreationRequest): Future[Task] = {
-    val insertedTask = Task(BSONObjectID.generate().stringify, newTask.label, newTask.description, newTask.archived, newTask.listId)
+  def createOne(newTask: TaskCreationRequest, username: String): Future[Task] = {
+    val insertedTask = Task(BSONObjectID.generate().stringify, newTask.label, newTask.description, newTask.archived, newTask.listId, Seq(username))
     collection.flatMap(_.insert.one(insertedTask)).map { _ => insertedTask }
   }
 
 
-  def updateOne (id: String, newTask: TaskCreationRequest): Future[Option[Unit]] = {
-    val updatedTask = Task(id, newTask.label, newTask.description, newTask.archived, newTask.listId)
+  def updateOne (id: String, newTask: TaskUpdateRequest): Future[Option[Unit]] = {
+    val updatedTask = Task(id, newTask.label, newTask.description, newTask.archived, newTask.listId, newTask.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedTask, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }

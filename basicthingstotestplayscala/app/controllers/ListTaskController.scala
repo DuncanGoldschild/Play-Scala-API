@@ -3,22 +3,16 @@ package controllers
 
 import scala.concurrent._
 import scala.collection.Seq
-
 import javax.inject._
 
 import ExecutionContext.Implicits.global
-
 import reactivemongo.play.json._
-
 import play.api.mvc._
 import play.api.libs.json._
 import play.api.Logger
-
 import com.google.inject.Singleton
-
 import repositories.MongoListTaskRepository
-
-import models.ListTaskCreationRequest
+import models.{ListTaskCreationRequest, ListTaskUpdateRequest}
 
 
 /**
@@ -66,7 +60,7 @@ class ListTaskController @Inject() (
         badRequest(errors)
       },
       listTask => {
-        listTaskRepository.createOne(listTask).map{
+        listTaskRepository.createOne(listTask, "Pierrot").map{
           createdListTask => Ok(Json.toJson(createdListTask))
         }.recover(logAndInternalServerError)
       }
@@ -75,7 +69,7 @@ class ListTaskController @Inject() (
 
   // Update with PUT /ListTask/"id"
   def updateListTask(id : String): Action[JsValue] = Action.async(parse.json) { request =>
-    val listTaskResult = request.body.validate[ListTaskCreationRequest]
+    val listTaskResult = request.body.validate[ListTaskUpdateRequest]
     listTaskResult.fold(
       errors => {
         badRequest(errors)

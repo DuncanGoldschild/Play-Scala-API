@@ -7,8 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import models.{Member, MemberAuth, MemberCreationRequest}
-import reactivemongo.api.commands.WriteResult
+import models.Member
 
 
 class MongoMemberRepository @Inject() (
@@ -22,8 +21,8 @@ class MongoMemberRepository @Inject() (
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("member"))
 
-  def createOne(newMember: MemberCreationRequest): Future[Option[Member]] = {
-    val insertedMember = Member(newMember.username, newMember.password, newMember.boardsId, newMember.tasksId)
+  def createOne(newMember: Member): Future[Option[Member]] = {
+    val insertedMember = Member(newMember.username, newMember.password)
     findOne(newMember.username)
       .flatMap{ // checking if the username is already existing
         case None => {
@@ -40,13 +39,13 @@ class MongoMemberRepository @Inject() (
       .map(verifyUpdatedOneDocument)
   }
 
-  def updateOne (username: String, newMember: MemberCreationRequest): Future[Option[Unit]] = {
-    val updatedMember = Member(username, newMember.password, newMember.boardsId, newMember.tasksId)
+  def updateOne (username: String, newMember: Member): Future[Option[Unit]] = {
+    val updatedMember = Member(username, newMember.password)
     collection.flatMap(_.update.one(q = idSelector(username), u = updatedMember, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
 
-  def findUser (memberAuth : MemberAuth): Future[Option[Member]] = {
+  def findUser (memberAuth : Member): Future[Option[Member]] = {
       collection.flatMap(_.find(BSONDocument("username" -> memberAuth.username, "password" -> memberAuth.password)).one[Member])
   }
 

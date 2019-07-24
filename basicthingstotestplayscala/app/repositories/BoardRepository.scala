@@ -2,16 +2,12 @@ package repositories
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import javax.inject._
-
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
-
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONObjectID}
-
-import models.{Board, BoardCreationRequest}
+import reactivemongo.bson.BSONObjectID
+import models.{Board, BoardCreationRequest, BoardUpdateRequest}
 
 
 class MongoBoardRepository @Inject() (
@@ -25,13 +21,13 @@ class MongoBoardRepository @Inject() (
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("board"))
 
-  def createOne(newBoard: BoardCreationRequest): Future[Board] = {
-    val insertedBoard = Board(BSONObjectID.generate().stringify, newBoard.label)
+  def createOne(newBoard: BoardCreationRequest, username : String): Future[Board] = {
+    val insertedBoard = Board(BSONObjectID.generate().stringify, newBoard.label, Seq(username))
     collection.flatMap(_.insert.one(insertedBoard)).map { _ => insertedBoard }
   }
 
-  def updateOne (id: String, newBoard: BoardCreationRequest): Future[Option[Unit]] = {
-    val updatedBoard = Board(id, newBoard.label)
+  def updateOne (id: String, newBoard: BoardUpdateRequest): Future[Option[Unit]] = {
+    val updatedBoard = Board(id, newBoard.label, newBoard.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedBoard, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
