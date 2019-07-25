@@ -34,17 +34,19 @@ class BoardController @Inject() (
 
   // Display the board by its id with GET /board/"id"
   def findBoardById(id: String): Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
-    request.headers.get("Authorization") match {
+    val auto = request.headers.get("Authorization")
+    println(auto)
+    auto match {
       case Some(token : String) => {
         jwtService.verifyToken(token) match{
-          case Success(_) =>  boardRepository.findOne(id)
+          case Success(_) =>  boardRepository.findOneBoard(id)
             .flatMap{
-              case Some(board : Board) =>
+              case Some(board) =>
                 if (board.membersUsername.contains(jwtService.fetchPayload(token))) Future.successful(Ok(Json.toJson(board)))
                 else Future.successful(NotFound)
               case None => Future.successful(Unauthorized)
             }.recover(logAndInternalServerError)
-          case Failure(_) => Future.successful(Unauthorized)
+          case Failure(_) => Future.successful(BadRequest)
         }
       } // handle token auth
       case None => Future.successful(Unauthorized)
@@ -53,7 +55,9 @@ class BoardController @Inject() (
 
   // Display all board elements with GET /boards
   def allUserBoards: Action[JsValue] = Action.async(parse.json) { request : Request[JsValue] =>
-    request.headers.get("Authorization") match {
+    val auto = request.headers.get("Authorization")
+    println(auto)
+    auto match {
       case Some(token : String) => {
         jwtService.verifyToken(token) match{
           case Success(_) =>  boardRepository.listAllFromUsername(jwtService.fetchPayload(token))
@@ -72,7 +76,7 @@ class BoardController @Inject() (
     request.headers.get("Authorization") match {
       case Some(token : String) => {
         jwtService.verifyToken(token) match{
-          case Success(_) =>  boardRepository.findOne(id)
+          case Success(_) =>  boardRepository.findOneBoard(id)
             .flatMap{
               case Some(board : Board) =>
                 if (board.membersUsername.contains(jwtService.fetchPayload(token))) boardRepository.deleteOne(id)
@@ -91,35 +95,59 @@ class BoardController @Inject() (
   }
 
   // Add with POST /boards
-  def createNewBoard: Action[JsValue] = Action.async(parse.json) { request =>
-    val boardResult = request.body.validate[BoardCreationRequest]
-    boardResult.fold(
-      errors => {
-        badRequest(errors)
-      },
-      board => {
-        boardRepository.createOne(board, "JeanMich").map{ // TODO : username request
-          createdBoard => Ok(Json.toJson(createdBoard))
-        }.recover(logAndInternalServerError)
+  def createNewBoard: Action[JsValue] = Action.async(parse.json) { request : Request[JsValue]=>
+    request.headers.get("Authorization") match {
+      case Some(token: String) => {
+        jwtService.verifyToken(token) match {
+          case Success(_) =>
+            val boardResult = request.body.validate[BoardCreationRequest]
+            boardResult.fold(
+              errors => {
+                badRequest(errors)
+              },
+              board => {
+                boardRepository.createOne(board, jwtService.fetchPayload(token)).map {
+                  createdBoard : Board => Ok(Json.toJson(createdBoard))
+                }.recover(logAndInternalServerError)
+              }
+            )
+          case Failure(_) => Future.successful(Unauthorized)
+        }
       }
-    )
+      case None => Future.successful(Unauthorized)
+    }
   }
 
   // Update with PUT /board/"id"
   def updateBoard(id : String): Action[JsValue] = Action.async(parse.json) { request =>
-    val boardResult = request.body.validate[BoardUpdateRequest]
-    boardResult.fold(
-      errors => {
-        badRequest(errors)
-      },
-      board => {
-        boardRepository.updateOne(id,board)
-          .map {
-            case Some(_) => NoContent
-            case None => NotFound
-          }.recover(logAndInternalServerError)
+    request.headers.get("Authorization") match {
+      case Some(token: String) => {
+        jwtService.verifyToken(token) match {
+          case Success(_) => boardRepository.findOneBoard(id)
+            .flatMap {
+              case Some(board: Board) =>
+                if (board.membersUsername.contains(jwtService.fetchPayload(token))){
+                request.body.validate[BoardUpdateRequest]
+                  .fold(
+                    errors => {
+                      badRequest(errors)
+                    },
+                    board => {
+                      boardRepository.updateOne(id, board)
+                        .map {
+                          case Some(_) => NoContent
+                        }.recover(logAndInternalServerError)
+                    }
+                  )
+                }
+                else Future.successful(Unauthorized)
+              case None => Future.successful(NotFound)
+            }
+          case Failure(_) => Future.successful(Unauthorized)
+        }
       }
-    )
+      case None => Future.successful(Unauthorized)
+    }
   }
 
   private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {

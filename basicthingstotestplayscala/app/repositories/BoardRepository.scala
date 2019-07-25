@@ -32,4 +32,8 @@ class MongoBoardRepository @Inject() (
       .map (verifyUpdatedOneDocument)
   }
 
+  def findOneBoard(id: String): Future[Option[Board]] = {
+    collection.flatMap(_.find(idSelector(id)).one[Board])
+  }
+
 }
