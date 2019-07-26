@@ -10,7 +10,6 @@ import scala.util.{Failure, Success, Try}
 
 trait JwtTokenGeneratorServices {
   def generateToken(u : String) : String
-  def verifyToken(token : String) : Try[(String,String,String)]
   def fetchUsername(token : String) : Option[String]
 }
 
@@ -20,8 +19,6 @@ class JwtTokenGenerator extends JwtTokenGeneratorServices {
   val secret = ConfigFactory.load(conf).getString("play.crypto.secret")
 
   override def generateToken(u : String): String = Jwt.encode(s"""{ "username" : "$u" }""", secret, JwtAlgorithm.HS256)
-
-  override def verifyToken(token : String): Try[(String,String,String)] = Jwt.decodeRawAll(token, secret, Seq(JwtAlgorithm.HS256))
 
   override def fetchUsername(token: String): Option[String] = {
      Jwt.decode(token, secret, Seq(JwtAlgorithm.HS256)) match {

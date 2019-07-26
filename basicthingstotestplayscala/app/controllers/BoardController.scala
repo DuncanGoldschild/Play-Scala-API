@@ -3,7 +3,6 @@ package controllers
 
 import scala.concurrent._
 import scala.collection.Seq
-import scala.util.{Failure, Success}
 
 import javax.inject._
 
@@ -13,7 +12,9 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.Logger
 import com.google.inject.Singleton
+
 import repositories.{MongoBoardRepository, MongoMemberRepository}
+
 import services.JwtTokenGenerator
 
 import models.{Board, BoardCreationRequest, BoardUpdateRequest}
