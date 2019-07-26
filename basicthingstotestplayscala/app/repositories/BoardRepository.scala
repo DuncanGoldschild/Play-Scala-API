@@ -20,7 +20,7 @@ class MongoBoardRepository @Inject() (
                                     ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
-  with GlobalRepository {
+  with GenericCRUDRepository [Board]{
 
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("board"))
@@ -34,10 +34,6 @@ class MongoBoardRepository @Inject() (
     val updatedBoard = Board(id, newBoard.label, newBoard.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedBoard, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
-  }
-
-  def findOneBoard(id: String): Future[Option[Board]] = {
-    collection.flatMap(_.find(idSelector(id)).one[Board])
   }
 
 }

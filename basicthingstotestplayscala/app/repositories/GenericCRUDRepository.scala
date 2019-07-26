@@ -2,22 +2,20 @@ package repositories
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 
 
-trait GlobalRepository {
+trait GenericCRUDRepository [A] {
+    def collection : Future[BSONCollection]
 
-  def collection : Future[BSONCollection]
-
-  def listAll[A : BSONDocumentReader]: Future[List[A]] = {
+  def listAll(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = {
       listAll(-1)
     }
 
-  def listAll[A : BSONDocumentReader](count: Int): Future[List[A]] = {
+  def listAll(count: Int)(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = {
       val cursor: Future[Cursor[A]] = collection.map {
       _.find(BSONDocument()).cursor[A](ReadPreference.primary)
     }
@@ -25,7 +23,7 @@ trait GlobalRepository {
       cursor.flatMap(_.collect[List](count, Cursor.FailOnError[List[A]]()))
   }
 
-  def listAllFromUsername [A : BSONDocumentReader](username: String): Future[List[A]] = {
+  def listAllFromUsername(username: String)(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = {
     val cursor: Future[Cursor[A]] = collection.map {
       _.find(BSONDocument("membersUsername" -> BSONDocument("$eq" -> username) )).cursor[A](ReadPreference.primary)
     }
@@ -33,7 +31,7 @@ trait GlobalRepository {
     cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[A]]()))
   }
 
-  def findOne[A : BSONDocumentReader](id: String): Future[Option[A]] = {
+  def findOne(id: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[A]] = {
     collection.flatMap(_.find(idSelector(id)).one[A])
   }
 

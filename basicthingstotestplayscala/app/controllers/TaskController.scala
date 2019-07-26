@@ -13,6 +13,7 @@ import play.api.Logger
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
 import models.{TaskCreationRequest, TaskUpdateRequest}
+import services.JwtTokenGenerator
 
 
 /**
@@ -22,7 +23,8 @@ import models.{TaskCreationRequest, TaskUpdateRequest}
 @Singleton
 class TaskController @Inject() (
                                   components: ControllerComponents,
-                                  taskRepository: MongoTaskRepository
+                                  taskRepository: MongoTaskRepository,
+                                  jwtService : JwtTokenGenerator
                                 ) extends AbstractController(components) {
 
   private val logger = Logger(this.getClass)
@@ -82,6 +84,14 @@ class TaskController @Inject() (
           }.recover(logAndInternalServerError)
       }
     )
+  }
+
+  private def verifyTokenAndGetUsername(request : Request[JsValue]): Option[String] = {
+    request.headers.get("Authorization")
+    match {
+      case Some(token : String) => jwtService.fetchUsername(token)
+      case None => None
+    }
   }
 
   private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {

@@ -4,7 +4,7 @@ import play.api.libs.json.{Json, Reads, Writes}
 
 import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, Macros}
 
-case class Board (id: String, label: String, membersUsername: Seq[String])
+case class Board (id: String, label: String, membersUsername: Seq[String]) 
 object Board {
 
   implicit val boardReader: BSONDocumentReader[Board] = Macros.reader[Board]
@@ -29,7 +29,7 @@ object BoardUpdateRequest{
 
 }
 
-case class ListTask (id: String, label: String, boardId: String, membersUsername: Seq[String])
+case class ListTask (id: String, label: String, boardId: String, membersUsername: Seq[String]) 
 object ListTask {
 
   implicit val listReader: BSONDocumentReader[ListTask] = Macros.reader[ListTask]
@@ -54,7 +54,7 @@ object ListTaskUpdateRequest{
 
 }
 
-case class Task (id: String, label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
+case class Task (id: String, label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String]) 
 object Task {
 
   implicit val taskReader: BSONDocumentReader[Task] = Macros.reader[Task]

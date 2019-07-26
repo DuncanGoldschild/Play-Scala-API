@@ -17,7 +17,7 @@ class MongoTaskRepository @Inject() (
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
-  with GlobalRepository {
+  with GenericCRUDRepository [Task] {
 
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("task"))

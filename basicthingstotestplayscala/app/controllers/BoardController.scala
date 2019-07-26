@@ -38,7 +38,7 @@ class BoardController @Inject() (
     verifyTokenAndGetUsername(request)
       match {
         case Some(tokenUsername) =>
-          boardRepository.findOneBoard(id)
+          boardRepository.findOne(id)
             .map{
               case Some(board) =>
                 if (board.membersUsername.contains(tokenUsername)) Ok(Json.toJson(board))
@@ -65,9 +65,9 @@ class BoardController @Inject() (
   // Delete with DELETE /board/"id"
   def deleteBoard(id : String): Action[JsValue] =  Action.async(parse.json) { request: Request[JsValue] =>
     verifyTokenAndGetUsername(request) match{
-      case Some(tokenUsername) =>  boardRepository.findOneBoard(id)
+      case Some(tokenUsername) =>  boardRepository.findOne(id)
         .flatMap{
-          case Some(board : Board) =>
+          case Some(board) =>
             if (board.membersUsername.contains(tokenUsername)) boardRepository.deleteOne(id)
               .map{
                 case Some(_) => NoContent
@@ -111,7 +111,7 @@ class BoardController @Inject() (
               badRequest(errors)
             },
             boardUpdate => {
-              boardRepository.findOneBoard(id)
+              boardRepository.findOne(id)
                 .flatMap {
                   case Some(board: Board) =>
                     if (board.membersUsername.contains(tokenUsername)) {
