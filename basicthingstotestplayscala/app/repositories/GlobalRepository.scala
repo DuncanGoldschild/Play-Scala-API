@@ -2,6 +2,7 @@ package repositories
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult

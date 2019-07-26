@@ -43,7 +43,7 @@ class TaskController @Inject() (
     }.recover(logAndInternalServerError)
   }
 
-  // Delete with DELETE /Task/"id"
+  // Delete with DELETE /task/"id"
   def deleteTask(id : String): Action[AnyContent] =  Action.async {
     taskRepository.deleteOne(id)
       .map{
@@ -52,7 +52,7 @@ class TaskController @Inject() (
       }.recover(logAndInternalServerError)
   }
 
-  // Add with POST /Tasks
+  // Add with POST /tasks
   def createNewTask: Action[JsValue] = Action.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskCreationRequest]
     taskResult.fold(
@@ -67,7 +67,7 @@ class TaskController @Inject() (
     )
   }
 
-  // Update with PUT /Task/"id"
+  // Update with PUT /task/"id"
   def updateTask(id : String): Action[JsValue] = Action.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskUpdateRequest]
     taskResult.fold(

@@ -2,11 +2,15 @@ package repositories
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
+
 import javax.inject._
+
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
+
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
+
 import models.{Board, BoardCreationRequest, BoardUpdateRequest}
 
 

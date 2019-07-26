@@ -27,7 +27,7 @@ class ListTaskController @Inject() (
 
   private val logger = Logger(this.getClass)
 
-  // Display the ListTask by its id with GET /ListTask/"id"
+  // Display the ListTask by its id with GET /list/"id"
   def findListTaskById(id: String): Action[AnyContent] = Action.async {
     listTaskRepository.findOne(id)
       .map{
@@ -36,14 +36,14 @@ class ListTaskController @Inject() (
       }.recover(logAndInternalServerError)
   }
 
-  // Display all ListTask elements with GET /ListTasks
+  // Display all ListTask elements with GET /lists
   def allListTasks: Action[AnyContent] = Action.async {
     listTaskRepository.listAll.map{
       list => Ok(Json.toJson(list))
     }.recover(logAndInternalServerError)
   }
 
-  // Delete with DELETE /ListTask/"id"
+  // Delete with DELETE /list/"id"
   def deleteListTask(id : String): Action[AnyContent] =  Action.async {
     listTaskRepository.deleteOne(id)
       .map{
@@ -52,7 +52,7 @@ class ListTaskController @Inject() (
       }.recover(logAndInternalServerError)
   }
 
-  // Add with POST /ListTasks
+  // Add with POST /lists
   def createNewListTask: Action[JsValue] = Action.async(parse.json) { request =>
     val listTaskResult = request.body.validate[ListTaskCreationRequest]
     listTaskResult.fold(
@@ -67,7 +67,7 @@ class ListTaskController @Inject() (
     )
   }
 
-  // Update with PUT /ListTask/"id"
+  // Update with PUT /list/"id"
   def updateListTask(id : String): Action[JsValue] = Action.async(parse.json) { request =>
     val listTaskResult = request.body.validate[ListTaskUpdateRequest]
     listTaskResult.fold(

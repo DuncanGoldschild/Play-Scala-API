@@ -6,7 +6,7 @@ import javax.inject._
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.{BSONDocument}
 import models.{Member, MemberUpdateRequest}
 
 

@@ -3,6 +3,7 @@ package controllers
 
 import scala.concurrent._
 import scala.collection.Seq
+
 import javax.inject._
 
 import ExecutionContext.Implicits.global
@@ -11,11 +12,13 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.Logger
 import com.google.inject.Singleton
+
 import repositories.MongoMemberRepository
+
 import services.JwtTokenGenerator
+
 import models.{Member, MemberUpdateRequest}
 
-import scala.util.{Failure, Success}
 
 
 /**
@@ -31,7 +34,7 @@ class MemberController @Inject() (
 
   private val logger = Logger(this.getClass)
 
-  // Display the Member by its id with GET /Member/"id"
+  // Display the Member by its id with GET /member/"id"
   def findMemberById(username: String): Action[AnyContent] = Action.async {
     memberRepository.findOne(username)
       .map{
@@ -57,14 +60,14 @@ class MemberController @Inject() (
     )
   }
 
-  // Display all Member elements with GET /Members
+  // Display all Member elements with GET /members
   def allMembers: Action[AnyContent] = Action.async {
     memberRepository.listAll.map{
       list => Ok(Json.toJson(list))
     }.recover(logAndInternalServerError)
   }
 
-  // Delete with DELETE /Member/"id"
+  // Delete with DELETE /member/"id"
   def deleteMember(username : String): Action[JsValue] =  Action.async(parse.json) { request =>
     checkUserPermissions(request, username)
         match {
@@ -78,7 +81,7 @@ class MemberController @Inject() (
         }
   }
 
-  // Add with POST /Members
+  // Add with POST /members
   def createNewMember: Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[Member]
     memberResult.fold(
@@ -94,7 +97,7 @@ class MemberController @Inject() (
     )
   }
 
-  // Update with PUT /Member/"username"
+  // Update with PUT /member/"username"
   def updateMember(username : String): Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[MemberUpdateRequest]
     memberResult.fold(
