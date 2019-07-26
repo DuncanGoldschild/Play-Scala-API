@@ -3,22 +3,19 @@ package controllers
 
 import scala.concurrent._
 import scala.collection.Seq
-
 import javax.inject._
 
 import ExecutionContext.Implicits.global
-
 import reactivemongo.play.json._
-
 import play.api.mvc._
 import play.api.libs.json._
 import play.api.Logger
-
 import com.google.inject.Singleton
-
 import repositories.MongoMemberRepository
 import services.JwtTokenGenerator
-import models.Member
+import models.{Member, MemberUpdateRequest}
+
+import scala.util.{Failure, Success}
 
 
 /**
@@ -50,8 +47,10 @@ class MemberController @Inject() (
         badRequest(errors)
       },
       memberAuth => {
-        memberRepository.findUser(memberAuth).map{
-          case Some(createdMember) => Ok(Json.toJson(jwtService.generateToken(createdMember.username)))
+        memberRepository.findByUsername(memberAuth.username).map{
+          case Some(member) =>
+            if (member.password == memberAuth.password) Ok(Json.toJson(jwtService.generateToken(member.username)))
+            else Unauthorized
           case None => NotFound
         }.recover(logAndInternalServerError)
       }
@@ -66,12 +65,17 @@ class MemberController @Inject() (
   }
 
   // Delete with DELETE /Member/"id"
-  def deleteMember(username : String): Action[AnyContent] =  Action.async {
-    memberRepository.deleteOne(username)
-      .map{
-        case Some(_) => NoContent
-        case None => NotFound
-      }.recover(logAndInternalServerError)
+  def deleteMember(username : String): Action[JsValue] =  Action.async(parse.json) { request =>
+    checkUserPermissions(request, username)
+        match {
+          case Some(_) =>
+            memberRepository.deleteOne(username)
+              .map {
+                case Some(_) => NoContent
+                case None => NotFound
+              }.recover(logAndInternalServerError)
+          case None => Future.successful(Unauthorized)
+        }
   }
 
   // Add with POST /Members
@@ -90,21 +94,38 @@ class MemberController @Inject() (
     )
   }
 
-  // Update with PUT /Member/"id"
+  // Update with PUT /Member/"username"
   def updateMember(username : String): Action[JsValue] = Action.async(parse.json) { request =>
-    val memberResult = request.body.validate[Member]
+    val memberResult = request.body.validate[MemberUpdateRequest]
     memberResult.fold(
       errors => {
         badRequest(errors)
       },
       member => {
-        memberRepository.updateOne(username,member)
-          .map {
-            case Some(_) => NoContent
-            case None => NotFound
-          }.recover(logAndInternalServerError)
+        checkUserPermissions(request, username)
+        match {
+          case Some(_) =>
+            memberRepository.updateOne(username, member)
+              .map {
+                case Some(_) => NoContent
+                case None => NotFound
+              }.recover(logAndInternalServerError)
+          case None => Future.successful(Unauthorized)
+        }
       }
     )
+  }
+
+  private def checkUserPermissions (request : Request[JsValue], username : String) : Option[Unit] = {
+    request.headers.get("Authorization") match {
+      case Some(token: String) => {
+        jwtService.fetchUsername(token) match {
+            case Some(tokenUsername) => if ( tokenUsername == username) Some(Unit) else None
+            case None => None
+          }
+      }
+      case None => None
+    }
   }
 
   private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {

@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import models.Member
+import models.{Member, MemberUpdateRequest}
 
 
 class MongoMemberRepository @Inject() (
@@ -34,23 +34,20 @@ class MongoMemberRepository @Inject() (
       }
   }
 
-  override def deleteOne(username: String): Future[Option[Unit]] = {
-    collection.flatMap(_.delete.one(idSelector(username)))
-      .map(verifyUpdatedOneDocument)
-  }
-
-  def updateOne (username: String, newMember: Member): Future[Option[Unit]] = {
+  def updateOne (username: String, newMember: MemberUpdateRequest): Future[Option[Unit]] = {
     val updatedMember = Member(username, newMember.password)
     collection.flatMap(_.update.one(q = idSelector(username), u = updatedMember, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
 
-  def findUser (memberAuth : Member): Future[Option[Member]] = {
-      collection.flatMap(_.find(BSONDocument("username" -> memberAuth.username, "password" -> memberAuth.password)).one[Member])
-  }
-
   def findByUsername(username: String): Future[Option[Member]] = {
     collection.flatMap(_.find(idSelector(username)).one[Member])
   }
+
+  override def deleteOne(username: String): Future[Option[Unit]] = {
+    collection.flatMap(_.delete.one(idSelector(username)))
+      .map(verifyUpdatedOneDocument)
+  }
+
   override def idSelector (username: String) = BSONDocument("username" -> username)
 }

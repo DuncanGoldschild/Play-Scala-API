@@ -89,3 +89,10 @@ object Member {
   implicit val memberReads: Reads[Member] = Json.reads[Member]
 
 }
+
+case class MemberUpdateRequest (password: String)
+object MemberUpdateRequest {
+
+  implicit val memberUpdateRequestReads: Reads[MemberUpdateRequest] = Json.reads[MemberUpdateRequest]
+
+}

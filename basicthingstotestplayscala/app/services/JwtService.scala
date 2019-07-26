@@ -11,7 +11,7 @@ import scala.util.{Failure, Success, Try}
 trait JwtTokenGeneratorServices {
   def generateToken(u : String) : String
   def verifyToken(token : String) : Try[(String,String,String)]
-  def fetchPayload(token : String) : String
+  def fetchUsername(token : String) : Option[String]
 }
 
 class JwtTokenGenerator extends JwtTokenGeneratorServices {
@@ -23,12 +23,10 @@ class JwtTokenGenerator extends JwtTokenGeneratorServices {
 
   override def verifyToken(token : String): Try[(String,String,String)] = Jwt.decodeRawAll(token, secret, Seq(JwtAlgorithm.HS256))
 
-  override def fetchPayload(token: String): String = {
+  override def fetchUsername(token: String): Option[String] = {
      Jwt.decode(token, secret, Seq(JwtAlgorithm.HS256)) match {
-      case Success(x) => {
-        println(x)
-        Json.parse(x.content).get("username").asText
-      }
+      case Success(x) => Some(Json.parse(x.content).get("username").asText)
+      case Failure(_) => None
     }
   }
 }
