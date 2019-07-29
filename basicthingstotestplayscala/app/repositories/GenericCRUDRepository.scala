@@ -11,9 +11,7 @@ import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 trait GenericCRUDRepository [A] {
     def collection : Future[BSONCollection]
 
-  def listAll(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = {
-      listAll(-1)
-    }
+  def listAll(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = listAll(-1)
 
   def listAll(count: Int)(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = {
       val cursor: Future[Cursor[A]] = collection.map {
@@ -39,7 +37,6 @@ trait GenericCRUDRepository [A] {
     collection.flatMap(_.delete.one(idSelector(id)))
       .map(verifyUpdatedOneDocument)
   }
-
 
   def idSelector (id: String) = BSONDocument("id" -> id)
 

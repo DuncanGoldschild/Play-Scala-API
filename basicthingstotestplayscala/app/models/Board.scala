@@ -29,28 +29,28 @@ object BoardUpdateRequest{
 
 }
 
-case class ListTask (id: String, label: String, boardId: String, membersUsername: Seq[String]) 
-object ListTask {
+case class TasksList(id: String, label: String, boardId: String, membersUsername: Seq[String])
+object TasksList {
 
-  implicit val listReader: BSONDocumentReader[ListTask] = Macros.reader[ListTask]
-  implicit val listWriter: BSONDocumentWriter[ListTask] = Macros.writer[ListTask]
+  implicit val listReader: BSONDocumentReader[TasksList] = Macros.reader[TasksList]
+  implicit val listWriter: BSONDocumentWriter[TasksList] = Macros.writer[TasksList]
 
-  implicit val listWrites: Writes[ListTask] = Json.writes[ListTask]
-  implicit val listReads: Reads[ListTask] = Json.reads[ListTask]
-
-}
-
-case class ListTaskCreationRequest (label: String, boardId: String)
-object ListTaskCreationRequest{
-
-  implicit val listCreationRequestReads: Reads[ListTaskCreationRequest] = Json.reads[ListTaskCreationRequest]
+  implicit val listWrites: Writes[TasksList] = Json.writes[TasksList]
+  implicit val listReads: Reads[TasksList] = Json.reads[TasksList]
 
 }
 
-case class ListTaskUpdateRequest (label: String, boardId: String, membersUsername: Seq[String])
-object ListTaskUpdateRequest{
+case class TasksListCreationRequest(label: String, boardId: String)
+object TasksListCreationRequest{
 
-  implicit val listUpdateRequestReads: Reads[ListTaskUpdateRequest] = Json.reads[ListTaskUpdateRequest]
+  implicit val listCreationRequestReads: Reads[TasksListCreationRequest] = Json.reads[TasksListCreationRequest]
+
+}
+
+case class TasksListUpdateRequest(label: String, boardId: String, membersUsername: Seq[String])
+object TasksListUpdateRequest{
+
+  implicit val listUpdateRequestReads: Reads[TasksListUpdateRequest] = Json.reads[TasksListUpdateRequest]
 
 }
 
@@ -90,7 +90,7 @@ object Member {
 
 }
 
-case class MemberUpdateRequest (password: String)
+case class MemberUpdateRequest (password: String, newPassword : String)
 object MemberUpdateRequest {
 
   implicit val memberUpdateRequestReads: Reads[MemberUpdateRequest] = Json.reads[MemberUpdateRequest]

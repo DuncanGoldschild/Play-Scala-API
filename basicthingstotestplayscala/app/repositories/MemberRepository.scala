@@ -24,9 +24,9 @@ class MongoMemberRepository @Inject() (
   def createOne(newMember: Member): Future[Option[Member]] = {
     val insertedMember = Member(newMember.username, newMember.password)
     findOne(newMember.username)
-      .flatMap{ // checking if the username is already existing
+      .flatMap {
         case None => {
-          collection.flatMap(_.insert.one(insertedMember)).map{
+          collection.flatMap(_.insert.one(insertedMember)).map {
             _ => Some(insertedMember)
           }
         }

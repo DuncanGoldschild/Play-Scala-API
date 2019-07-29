@@ -1,4 +1,4 @@
-package models
+/*package models
 
 import reactivemongo.bson._
 
@@ -22,4 +22,4 @@ object Food {
   implicit val foodWrites: Writes[Food] = Json.writes[Food]
   implicit val foodReads: Reads[Food] = Json.reads[Food]
 
-}
+}*/

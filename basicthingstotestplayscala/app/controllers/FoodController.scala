@@ -1,4 +1,4 @@
-package controllers
+/*package controllers
 
 
 import scala.concurrent._
@@ -34,39 +34,39 @@ class FoodController @Inject() (
   private val logger = Logger(this.getClass)
 
 // Display the Food by its id with GET /food/"id"
-  def findById(id: String): Action[AnyContent] = Action.async {
+  def findById(id: String): Action[AnyContent] = appAction.async {
   foodRepository.findOne(id)
-    .map{
+    .map {
       case Some(food) => Ok(Json.toJson(food))
       case None => NotFound
     }.recover(logAndInternalServerError)
   }
 
   // Display all Food elements with GET /foods
-  def listFood: Action[AnyContent] = Action.async {
-    foodRepository.listAll.map{
+  def listFood: Action[AnyContent] = appAction.async {
+    foodRepository.listAll.map {
       list => Ok(Json.toJson(list))
     }.recover(logAndInternalServerError)
   }
 
   // Delete with DELETE /food/"id"
-  def deleteFood(id : String): Action[AnyContent] =  Action.async {
+  def deleteFood(id : String): Action[AnyContent] =  appAction.async {
     foodRepository.deleteOne(id)
-    .map{
+    .map {
       case Some(_) => NoContent
       case None => NotFound
     }.recover(logAndInternalServerError)
   }
 
   // Add with POST /foods
-  def newFood: Action[JsValue] = Action.async(parse.json) { request =>
+  def newFood: Action[JsValue] = appAction.async(parse.json) { request =>
       val foodResult = request.body.validate[FoodWithoutId]
       foodResult.fold(
         errors => {
           badRequest(errors)
         },
         food => {
-            foodRepository.createOne(food).map{
+            foodRepository.createOne(food).map {
               createdFood => Ok(Json.toJson(createdFood))
             }.recover(logAndInternalServerError)
         }
@@ -74,7 +74,7 @@ class FoodController @Inject() (
   } 
 
   // Update with PUT /food/"id"
-  def updateFood(id : String): Action[JsValue] = Action.async(parse.json) { request =>
+  def updateFood(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
     val foodResult = request.body.validate[FoodWithoutId]
     foodResult.fold(
       errors => {
@@ -100,4 +100,4 @@ class FoodController @Inject() (
       InternalServerError
 
   }
-}
+}*/

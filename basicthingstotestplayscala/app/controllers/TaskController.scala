@@ -13,7 +13,7 @@ import play.api.Logger
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
 import models.{TaskCreationRequest, TaskUpdateRequest}
-import services.JwtTokenGenerator
+import services.JwtGenerator
 
 
 /**
@@ -24,45 +24,47 @@ import services.JwtTokenGenerator
 class TaskController @Inject() (
                                   components: ControllerComponents,
                                   taskRepository: MongoTaskRepository,
-                                  jwtService : JwtTokenGenerator
+                                  jwtService : JwtGenerator,
+                                  controllerUtils: ControllerUtils,
+                                  appAction: AppAction
                                 ) extends AbstractController(components) {
 
   private val logger = Logger(this.getClass)
 
   // Display the task by its id with GET /task/"id"
-  def findTaskById(id: String): Action[AnyContent] = Action.async {
+  def findTaskById(id: String): Action[AnyContent] = appAction.async {
     taskRepository.findOne(id)
-      .map{
+      .map {
         case Some(task) => Ok(Json.toJson(task))
         case None => NotFound
       }.recover(logAndInternalServerError)
   }
 
   // Display all Task elements with GET /tasks
-  def allTasks: Action[AnyContent] = Action.async {
-    taskRepository.listAll.map{
+  def allTasks: Action[AnyContent] = appAction.async {
+    taskRepository.listAll.map {
       list => Ok(Json.toJson(list))
     }.recover(logAndInternalServerError)
   }
 
   // Delete with DELETE /task/"id"
-  def deleteTask(id : String): Action[AnyContent] =  Action.async {
+  def deleteTask(id : String): Action[AnyContent] =  appAction.async {
     taskRepository.deleteOne(id)
-      .map{
+      .map {
         case Some(_) => NoContent
         case None => NotFound
       }.recover(logAndInternalServerError)
   }
 
   // Add with POST /tasks
-  def createNewTask: Action[JsValue] = Action.async(parse.json) { request =>
+  def createNewTask: Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskCreationRequest]
     taskResult.fold(
       errors => {
         badRequest(errors)
       },
       task => {
-        taskRepository.createOne(task, "Pierrot").map{
+        taskRepository.createOne(task, "Pierrot").map {
           createdTask => Ok(Json.toJson(createdTask))
         }.recover(logAndInternalServerError)
       }
@@ -70,7 +72,7 @@ class TaskController @Inject() (
   }
 
   // Update with PUT /task/"id"
-  def updateTask(id : String): Action[JsValue] = Action.async(parse.json) { request =>
+  def updateTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskUpdateRequest]
     taskResult.fold(
       errors => {
@@ -89,7 +91,7 @@ class TaskController @Inject() (
   private def verifyTokenAndGetUsername(request : Request[JsValue]): Option[String] = {
     request.headers.get("Authorization")
     match {
-      case Some(token : String) => jwtService.fetchUsername(token)
+      case Some(token : String) => jwtService.getUsernameFromToken(token)
       case None => None
     }
   }

@@ -5,19 +5,19 @@
 
 
 #Read all
-GET     /foods                      controllers.FoodController.listFood
+#GET     /foods                      controllers.FoodController.listFood
 
 #Create one
-POST    /foods                      controllers.FoodController.newFood
+#POST    /foods                      controllers.FoodController.newFood
 
 #Read one
-GET     /food/:id                   controllers.FoodController.findById(id : String)
+#GET     /food/:id                   controllers.FoodController.findById(id : String)
 
 #Delete one
-DELETE  /food/:id                   controllers.FoodController.deleteFood(id : String)
+#DELETE  /food/:id                   controllers.FoodController.deleteFood(id : String)
 
 #Update one
-PUT     /food/:id                   controllers.FoodController.updateFood(id : String)
+#PUT     /food/:id                   controllers.FoodController.updateFood(id : String)
 
 
 
@@ -31,11 +31,11 @@ PUT     /board/:id                  controllers.BoardController.updateBoard(id :
 DELETE  /board/:id                  controllers.BoardController.deleteBoard(id : String)
 
 #List Request
-GET     /lists                      controllers.ListTaskController.allListTasks
-POST    /lists                      controllers.ListTaskController.createNewListTask
-GET     /list/:id                   controllers.ListTaskController.findListTaskById(id : String)
-PUT     /list/:id                   controllers.ListTaskController.updateListTask(id : String)
-DELETE  /list/:id                   controllers.ListTaskController.deleteListTask(id : String)
+GET     /lists                      controllers.TasksListController.allListTasks
+POST    /lists                      controllers.TasksListController.createNewListTask
+GET     /list/:id                   controllers.TasksListController.findListTaskById(id : String)
+PUT     /list/:id                   controllers.TasksListController.updateListTask(id : String)
+DELETE  /list/:id                   controllers.TasksListController.deleteListTask(id : String)
 
 #Task Request
 GET     /tasks                      controllers.TaskController.allTasks

@@ -20,7 +20,7 @@ class MongoBoardRepository @Inject() (
                                     ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
-  with GenericCRUDRepository [Board]{
+  with GenericCRUDRepository[Board]{
 
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("board"))
