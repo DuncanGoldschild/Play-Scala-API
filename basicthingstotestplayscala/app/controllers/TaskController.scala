@@ -14,6 +14,7 @@ import com.google.inject.Singleton
 import repositories.MongoTaskRepository
 import models.{TaskCreationRequest, TaskUpdateRequest}
 import services.JwtGenerator
+import utils.{AppAction, ControllerUtils, UserRequest}
 
 
 /**
@@ -88,7 +89,7 @@ class TaskController @Inject() (
     )
   }
 
-  private def verifyTokenAndGetUsername(request : Request[JsValue]): Option[String] = {
+  private def verifyTokenAndGetUsername(request : UserRequest[JsValue]): Option[String] = {
     request.headers.get("Authorization")
     match {
       case Some(token : String) => jwtService.getUsernameFromToken(token)

@@ -1,13 +1,14 @@
-package controllers
+package utils
 
-import scala.collection.Seq
-import scala.concurrent._
 import javax.inject.Inject
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{JsError, JsPath, Json, JsonValidationError}
-import play.api.mvc.{AbstractController, ActionBuilder, ActionTransformer, AnyContent, BodyParsers, ControllerComponents, Request, Result, Results, WrappedRequest}
+import play.api.mvc._
 import services.JwtGenerator
+
+import scala.collection.Seq
+import scala.concurrent._
 
 
 

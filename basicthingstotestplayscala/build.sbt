@@ -15,6 +15,7 @@ libraryDependencies ++= Seq(
   "com.pauldijou"     %% "jwt-core"                          % "3.1.0"
 )
 
+libraryDependencies +=  "org.mindrot" % "jbcrypt" % "0.3m"
 libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test
 

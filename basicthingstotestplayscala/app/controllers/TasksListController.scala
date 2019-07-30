@@ -13,6 +13,7 @@ import play.api.Logger
 import com.google.inject.Singleton
 import repositories.MongoListTaskRepository
 import models.{TasksListCreationRequest, TasksListUpdateRequest}
+import utils.{AppAction, ControllerUtils}
 
 
 /**
@@ -61,8 +62,8 @@ class TasksListController @Inject()(
       errors => {
         badRequest(errors)
       },
-      listTask => {
-        listTaskRepository.createOne(listTask, "Pierrot").map {
+      listToCreate => {
+        listTaskRepository.createOne(listToCreate, request.username).map {
           createdListTask => Ok(Json.toJson(createdListTask))
         }.recover(logAndInternalServerError)
       }
@@ -76,8 +77,8 @@ class TasksListController @Inject()(
       errors => {
         badRequest(errors)
       },
-      listTask => {
-        listTaskRepository.updateOne(id,listTask)
+      listToUpdate => {
+        listTaskRepository.updateOne(id,listToUpdate)
           .map {
             case Some(_) => NoContent
             case None => NotFound

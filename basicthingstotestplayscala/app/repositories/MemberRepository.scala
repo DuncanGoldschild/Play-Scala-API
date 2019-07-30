@@ -6,13 +6,15 @@ import javax.inject._
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.{BSONDocument}
+import reactivemongo.bson.BSONDocument
 import models.{Member, MemberUpdateRequest}
+import services.BCryptServiceImpl
 
 
 class MongoMemberRepository @Inject() (
                                        components: ControllerComponents,
-                                       val reactiveMongoApi: ReactiveMongoApi
+                                       val reactiveMongoApi: ReactiveMongoApi,
+                                       bcryptService : BCryptServiceImpl
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -22,7 +24,7 @@ class MongoMemberRepository @Inject() (
     database.map(_.collection[BSONCollection]("member"))
 
   def createOne(newMember: Member): Future[Option[Member]] = {
-    val insertedMember = Member(newMember.username, newMember.password)
+    val insertedMember = Member(newMember.username, bcryptService.cryptPassword(newMember.password))
     findOne(newMember.username)
       .flatMap {
         case None => {
@@ -35,7 +37,7 @@ class MongoMemberRepository @Inject() (
   }
 
   def updateOne (username: String, newMember: MemberUpdateRequest): Future[Option[Unit]] = {
-    val updatedMember = Member(username, newMember.password)
+    val updatedMember = Member(username, bcryptService.cryptPassword(newMember.newPassword))
     collection.flatMap(_.update.one(q = idSelector(username), u = updatedMember, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
