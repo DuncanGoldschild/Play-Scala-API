@@ -2,16 +2,12 @@ package repositories
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import javax.inject._
-
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
-
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
-
-import models.{Board, BoardCreationRequest, BoardUpdateRequest}
+import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
 
 
 class MongoBoardRepository @Inject() (
@@ -35,5 +31,43 @@ class MongoBoardRepository @Inject() (
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedBoard, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
+
+  // Treatment function
+  def update (boardUpdateRequestId : String, boardUpdateRequest: BoardUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+    findOne(boardUpdateRequestId)
+      .flatMap {
+        case Some(board: Board) if isUsernameContainedInBoard(username, board) =>
+          updateOne(boardUpdateRequestId, boardUpdateRequest)
+            .map {
+              case Some (_) => Right()
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def delete (boardId : String, username : String) : Future[Either[Exception, Unit]] = {
+    findOne(boardId)
+      .flatMap {
+        case Some(board) if isUsernameContainedInBoard(username, board) =>
+          deleteOne(boardId)
+            .map {
+              case Some (_) => Right()
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def find (boardId : String, username : String) : Future[Either[Exception, Board]] = {
+    findOne(boardId)
+      .flatMap {
+        case Some(board) if isUsernameContainedInBoard(username, board) => Future.successful(Right(board))
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  private def isUsernameContainedInBoard (username: String, board: Board): Boolean = board.membersUsername.contains(username)
 
 }

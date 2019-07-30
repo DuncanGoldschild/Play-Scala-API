@@ -10,7 +10,7 @@ import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.{MongoBoardRepository, MongoMemberRepository}
 import services.JwtGenerator
-import models.{Board, BoardCreationRequest, BoardUpdateRequest}
+import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -26,11 +26,11 @@ class BoardController @Inject() (
 
   // Returns a JSON of the board by its id with GET /board/"id"
   def findBoardById(id: String): Action[JsValue] = appAction.async(parse.json) { request : UserRequest[JsValue] =>
-    boardRepository.findOne(id)
+    boardRepository.find(id, request.username)
       .map {
-        case Some(board) if isUsernameContainedInBoard(request.username, board) => Ok(Json.toJson(board))
-        case None => NotFound
-        case _ => Forbidden
+        case Right(board) => Ok(Json.toJson(board))
+        case Left(_: NotFoundException) => NotFound
+        case Left(_: ForbiddenException) => Forbidden
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
@@ -44,15 +44,11 @@ class BoardController @Inject() (
 
   // Delete with DELETE /board/"id"
   def deleteBoard(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
-    boardRepository.findOne(id)
-      .flatMap {
-        case Some(board) if isUsernameContainedInBoard(request.username, board) =>
-          boardRepository.deleteOne(id)
-            .map {
-              case Some(_) => NoContent
-            }.recover(controllerUtils.logAndInternalServerError)
-        case None => Future.successful(NotFound)
-        case _ =>  Future.successful(Forbidden)
+    boardRepository.delete(id, request.username)
+      .map {
+        case Right(_) => NoContent
+        case Left(_: NotFoundException) => NotFound
+        case Left(_: ForbiddenException) => Forbidden
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
@@ -75,19 +71,13 @@ class BoardController @Inject() (
       .fold(
         controllerUtils.badRequest,
         boardUpdateRequest => {
-          boardRepository.findOne(id)
-            .flatMap {
-              case Some(board: Board) if isUsernameContainedInBoard(request.username, board) =>
-                boardRepository.updateOne(id, boardUpdateRequest)
-                  .map {
-                    case Some(_) => NoContent
-                  }.recover(controllerUtils.logAndInternalServerError)
-              case None => Future.successful(NotFound)
-              case _ => Future.successful(Forbidden)
-            }
+          boardRepository.update(id, boardUpdateRequest, request.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(_: NotFoundException) => NotFound
+              case Left(_: ForbiddenException) => Forbidden
+            }.recover(controllerUtils.logAndInternalServerError)
         }
       )
   }
-
-  private def isUsernameContainedInBoard (username: String, board: Board): Boolean = board.membersUsername.contains(username)
 }

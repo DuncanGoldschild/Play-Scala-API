@@ -42,9 +42,7 @@ class MemberController @Inject() (
   def authMember : Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[Member]
     memberResult.fold(
-      errors => {
-        controllerUtils.badRequest(errors)
-      },
+      controllerUtils.badRequest,
       memberAuth => {
         memberRepository.findByUsername(memberAuth.username).map {
           case Some(member) =>
@@ -65,7 +63,7 @@ class MemberController @Inject() (
 
   // Delete with DELETE /member/"id"
   def deleteMember(username : String): Action[JsValue] =  appAction.async(parse.json) { request =>
-    if (checkUserPermissions(request, username))
+    if (checkUserPermissions(request.username, username))
       memberRepository.deleteOne(username)
         .map {
           case Some(_) => NoContent
@@ -78,9 +76,7 @@ class MemberController @Inject() (
   def createNewMember: Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[Member]
     memberResult.fold(
-      errors => {
-        controllerUtils.badRequest(errors)
-      },
+      controllerUtils.badRequest,
       member => {
         memberRepository.createOne(member).map {
           case Some(createdMember) => Ok(Json.toJson(createdMember))
@@ -92,27 +88,25 @@ class MemberController @Inject() (
 
   // Update with PUT /member/"username"
   def updateMember(username : String): Action[JsValue] = appAction.async(parse.json) { request =>
-    val memberResult = request.body.validate[MemberUpdateRequest]
-    memberResult.fold(
-      errors => {
-        controllerUtils.badRequest(errors)
-      },
-      memberUpdateRequest => {
-        memberRepository.findByUsername(username)
-          .flatMap{
-            case Some(member) => {
-              if (checkUserPermissions(request, username) && bcryptService.checkPassword(memberUpdateRequest.password, member.password))
-                memberRepository.updateOne(username, memberUpdateRequest)
-                  .map {
-                    case Some(_) => NoContent
-                  }.recover(controllerUtils.logAndInternalServerError)
-              else Future.successful(Unauthorized)
+    request.body.validate[MemberUpdateRequest]
+      .fold(
+        controllerUtils.badRequest,
+        memberUpdateRequest => {
+          memberRepository.findByUsername(username)
+            .flatMap{
+              case Some(member) => {
+                if (checkUserPermissions(request.username, username) && bcryptService.checkPassword(memberUpdateRequest.password, member.password))
+                  memberRepository.updateOne(username, memberUpdateRequest)
+                    .map {
+                      case Some(_) => NoContent
+                    }.recover(controllerUtils.logAndInternalServerError)
+                else Future.successful(Unauthorized)
+              }
+              case None => Future.successful(NotFound)
             }
-            case None => Future.successful(NotFound)
-          }
-      }
-    )
+        }
+      )
   }
 
-  private def checkUserPermissions (request : UserRequest[JsValue], username : String) : Boolean = request.username == username
+  private def checkUserPermissions (tokenUsername : String, username : String) : Boolean = tokenUsername == username
 }

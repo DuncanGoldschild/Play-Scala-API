@@ -36,14 +36,14 @@ class TasksListController @Inject()(
       .map {
         case Some(listTask) => Ok(Json.toJson(listTask))
         case None => NotFound
-      }.recover(logAndInternalServerError)
+      }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Display all ListTask elements with GET /lists
   def allListTasks: Action[AnyContent] = appAction.async {
     listTaskRepository.listAll.map {
       list => Ok(Json.toJson(list))
-    }.recover(logAndInternalServerError)
+    }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Delete with DELETE /list/"id"
@@ -52,20 +52,18 @@ class TasksListController @Inject()(
       .map {
         case Some(_) => NoContent
         case None => NotFound
-      }.recover(logAndInternalServerError)
+      }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Add with POST /lists
   def createNewListTask: Action[JsValue] = appAction.async(parse.json) { request =>
     val listTaskResult = request.body.validate[TasksListCreationRequest]
     listTaskResult.fold(
-      errors => {
-        badRequest(errors)
-      },
+      controllerUtils.badRequest,
       listToCreate => {
         listTaskRepository.createOne(listToCreate, request.username).map {
           createdListTask => Ok(Json.toJson(createdListTask))
-        }.recover(logAndInternalServerError)
+        }.recover(controllerUtils.logAndInternalServerError)
       }
     )
   }
@@ -74,27 +72,14 @@ class TasksListController @Inject()(
   def updateListTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
     val listTaskResult = request.body.validate[TasksListUpdateRequest]
     listTaskResult.fold(
-      errors => {
-        badRequest(errors)
-      },
+      controllerUtils.badRequest,
       listToUpdate => {
         listTaskRepository.updateOne(id,listToUpdate)
           .map {
             case Some(_) => NoContent
             case None => NotFound
-          }.recover(logAndInternalServerError)
+          }.recover(controllerUtils.logAndInternalServerError)
       }
     )
-  }
-
-  private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
-    Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
-  }
-
-  private def logAndInternalServerError: PartialFunction[Throwable, Result] = {
-    case e : Throwable =>
-      logger.error(e.getMessage, e)
-      InternalServerError
-
   }
 }

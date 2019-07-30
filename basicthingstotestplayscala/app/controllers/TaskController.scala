@@ -38,14 +38,14 @@ class TaskController @Inject() (
       .map {
         case Some(task) => Ok(Json.toJson(task))
         case None => NotFound
-      }.recover(logAndInternalServerError)
+      }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Display all Task elements with GET /tasks
   def allTasks: Action[AnyContent] = appAction.async {
     taskRepository.listAll.map {
       list => Ok(Json.toJson(list))
-    }.recover(logAndInternalServerError)
+    }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Delete with DELETE /task/"id"
@@ -54,20 +54,18 @@ class TaskController @Inject() (
       .map {
         case Some(_) => NoContent
         case None => NotFound
-      }.recover(logAndInternalServerError)
+      }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Add with POST /tasks
   def createNewTask: Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskCreationRequest]
     taskResult.fold(
-      errors => {
-        badRequest(errors)
-      },
+        controllerUtils.badRequest,
       task => {
         taskRepository.createOne(task, "Pierrot").map {
           createdTask => Ok(Json.toJson(createdTask))
-        }.recover(logAndInternalServerError)
+        }.recover(controllerUtils.logAndInternalServerError)
       }
     )
   }
@@ -76,35 +74,14 @@ class TaskController @Inject() (
   def updateTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskUpdateRequest]
     taskResult.fold(
-      errors => {
-        badRequest(errors)
-      },
+        controllerUtils.badRequest,
       task => {
         taskRepository.updateOne(id,task)
           .map {
             case Some(_) => NoContent
             case None => NotFound
-          }.recover(logAndInternalServerError)
+          }.recover(controllerUtils.logAndInternalServerError)
       }
     )
-  }
-
-  private def verifyTokenAndGetUsername(request : UserRequest[JsValue]): Option[String] = {
-    request.headers.get("Authorization")
-    match {
-      case Some(token : String) => jwtService.getUsernameFromToken(token)
-      case None => None
-    }
-  }
-
-  private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
-    Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
-  }
-
-  private def logAndInternalServerError: PartialFunction[Throwable, Result] = {
-    case e : Throwable =>
-      logger.error(e.getMessage, e)
-      InternalServerError
-
   }
 }
