@@ -2,18 +2,20 @@ package controllers
 
 
 import scala.concurrent._
-import scala.collection.Seq
+
 import javax.inject._
 
 import ExecutionContext.Implicits.global
-import reactivemongo.play.json._
 import play.api.mvc._
 import play.api.libs.json._
-import play.api.Logger
 import com.google.inject.Singleton
+
 import repositories.MongoTaskRepository
-import models.{TaskCreationRequest, TaskUpdateRequest}
+
+import models.{ForbiddenException, NotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
+
 import services.JwtGenerator
+
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -30,30 +32,32 @@ class TaskController @Inject() (
                                   appAction: AppAction
                                 ) extends AbstractController(components) {
 
-  private val logger = Logger(this.getClass)
-
   // Display the task by its id with GET /task/"id"
-  def findTaskById(id: String): Action[AnyContent] = appAction.async {
-    taskRepository.findOne(id)
+  def findTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    taskRepository.find(id, request.username)
       .map {
-        case Some(task) => Ok(Json.toJson(task))
-        case None => NotFound
+        case Right(task) => Ok(Json.toJson(task))
+        case Left(_: NotFoundException) => NotFound
+        case Left(_: ForbiddenException) => Forbidden
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Display all Task elements with GET /tasks
-  def allTasks: Action[AnyContent] = appAction.async {
-    taskRepository.listAll.map {
-      list => Ok(Json.toJson(list))
-    }.recover(controllerUtils.logAndInternalServerError)
+  def allTasks: Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+    taskRepository.listAllFromUsername(request.username)
+      .map {
+        list => Ok(Json.toJson(list))
+      }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Delete with DELETE /task/"id"
-  def deleteTask(id : String): Action[AnyContent] =  appAction.async {
-    taskRepository.deleteOne(id)
+  def deleteTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
+    taskRepository.delete(id, request.username)
       .map {
-        case Some(_) => NoContent
-        case None => NotFound
+        case Right(_) => NoContent
+        case Left(_: NotFoundException) => NotFound
+        case Left(_: ForbiddenException) => Forbidden
+        case Left(_: NotArchivedException) => Locked
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
@@ -75,11 +79,12 @@ class TaskController @Inject() (
     val taskResult = request.body.validate[TaskUpdateRequest]
     taskResult.fold(
         controllerUtils.badRequest,
-      task => {
-        taskRepository.updateOne(id,task)
+      taskUpdateRequest => {
+        taskRepository.update(id, taskUpdateRequest, request.username)
           .map {
-            case Some(_) => NoContent
-            case None => NotFound
+            case Right(_) => NoContent
+            case Left(_: NotFoundException) => NotFound
+            case Left(_: ForbiddenException) => Forbidden
           }.recover(controllerUtils.logAndInternalServerError)
       }
     )

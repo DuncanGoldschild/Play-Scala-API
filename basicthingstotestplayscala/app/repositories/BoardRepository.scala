@@ -32,7 +32,6 @@ class MongoBoardRepository @Inject() (
       .map (verifyUpdatedOneDocument)
   }
 
-  // Treatment function
   def update (boardUpdateRequestId : String, boardUpdateRequest: BoardUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
     findOne(boardUpdateRequestId)
       .flatMap {

@@ -1,6 +1,6 @@
 package repositories
 
-import models.{Board, TrelloApi}
+import models.Board
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,7 +10,7 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 
 
-trait GenericCRUDRepository [A <: TrelloApi] {
+trait GenericCRUDRepository [A] {
     def collection : Future[BSONCollection]
 
   def listAll(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = listAll(-1)
@@ -44,7 +44,4 @@ trait GenericCRUDRepository [A <: TrelloApi] {
 
   def verifyUpdatedOneDocument(writeResult: WriteResult): Option[Unit] =
     if (writeResult.n == 1 && writeResult.ok) Some() else None
-
-  private def isUsernameContainedInBoard (username: String, board: A): Boolean = board.membersUsername.contains(username)
-
 }

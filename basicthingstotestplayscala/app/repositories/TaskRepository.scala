@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
-import models.{Task, TaskCreationRequest, TaskUpdateRequest}
+import models.{ForbiddenException, NotArchivedException, NotFoundException, Task, TaskCreationRequest, TaskUpdateRequest}
 
 
 
@@ -37,14 +37,43 @@ class MongoTaskRepository @Inject() (
   def findOne(id: String): Future[Option[Task]] = {
     collection.flatMap(_.find(idSelector(id)).one[Task])
   }
-  override def deleteOne(id: String): Future[Option[Unit]] = {
-    findOne(id)
+
+  def delete (taskId : String, username : String) : Future[Either[Exception, Unit]] = {
+    findOne(taskId)
       .flatMap {
-        case Some(task) => if (task.archived) {
-          collection.flatMap(_.delete.one(idSelector(id)))
-            .map(verifyUpdatedOneDocument)
-        } else Future.successful(None)
-        case None => Future.successful(None)
-    }
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+          if (task.archived) {
+            deleteOne(taskId)
+              .map {
+                case Some(_) => Right()
+              }
+          } else Future.successful(Left(NotArchivedException()))
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
   }
+
+  def find (taskId : String, username : String) : Future[Either[Exception, Task]] = {
+    findOne(taskId)
+      .flatMap {
+        case Some(task) if isUsernameContainedInTask(username, task) => Future.successful(Right(task))
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def update (taskUpdateRequestId : String, taskUpdateRequest: TaskUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+    findOne(taskUpdateRequestId)
+      .flatMap {
+        case Some(task: Task) if isUsernameContainedInTask(username, task) =>
+          updateOne(taskUpdateRequestId, taskUpdateRequest)
+            .map {
+              case Some (_) => Right()
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+  private def isUsernameContainedInTask (username: String, task: Task): Boolean = task.membersUsername.contains(username)
+
 }
