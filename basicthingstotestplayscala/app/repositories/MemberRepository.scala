@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
-import models.{BadRequestException, Member, MemberUpdateRequest}
+import models.{BadRequestException, ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
 import services.{BCryptServiceImpl, JwtGenerator}
 
 
@@ -37,13 +37,6 @@ class MongoMemberRepository @Inject() (
       }
   }
 
-  def auth (memberAuth: Member) : Future[Option[String]] = {
-    findByUsername(memberAuth.username).map {
-      case Some(member) if bcryptService.checkPassword(memberAuth.password, member.password) => Some(jwtService.generateToken(member.username))
-      case _ => None
-    }
-  }
-
   def updateOne (username: String, newMember: MemberUpdateRequest): Future[Option[Unit]] = {
     val updatedMember = Member(username, bcryptService.cryptPassword(newMember.newPassword))
     collection.flatMap(_.update.one(q = idSelector(username), u = updatedMember, upsert = false, multi = false))
@@ -58,6 +51,39 @@ class MongoMemberRepository @Inject() (
     collection.flatMap(_.delete.one(idSelector(username)))
       .map(verifyUpdatedOneDocument)
   }
+
+  def auth (memberAuth: Member) : Future[Option[String]] = {
+    findByUsername(memberAuth.username).map {
+      case Some(member) if bcryptService.checkPassword(memberAuth.password, member.password) => Some(jwtService.generateToken(member.username))
+      case _ => None
+    }
+  }
+
+  def update (username : String, tokenUsername: String, memberUpdateRequest: MemberUpdateRequest): Future[Either[Exception, Unit]] = {
+    findByUsername(username)
+      .flatMap {
+        case Some(member) if checkUserPermissions(username, tokenUsername)&& bcryptService.checkPassword(memberUpdateRequest.password, member.password) =>
+          updateOne(username, memberUpdateRequest)
+            .map {
+              case Some (_) => Right()
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def delete (username : String, tokenUsername : String) : Future[Either[Exception, Unit]] = {
+    if (checkUserPermissions(username, tokenUsername)) {
+      deleteOne(username)
+        .map {
+          case Some(_) => Right()
+          case None => Left(NotFoundException())
+        }
+    }
+    else Future.successful(Left(ForbiddenException()))
+  }
+
+  private def checkUserPermissions (tokenUsername : String, username : String) : Boolean = tokenUsername == username
 
   override def idSelector (username: String) = BSONDocument("username" -> username)
 }

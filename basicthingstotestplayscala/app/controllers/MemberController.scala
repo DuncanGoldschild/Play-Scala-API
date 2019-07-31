@@ -11,7 +11,7 @@ import play.api.Logger
 import com.google.inject.Singleton
 import repositories.MongoMemberRepository
 import services.{BCryptServiceImpl, JwtGenerator}
-import models.{Member, MemberUpdateRequest}
+import models.{ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 /**
@@ -41,15 +41,15 @@ class MemberController @Inject() (
 
   def authMember : Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[Member]
-    memberResult.fold(
-      controllerUtils.badRequest,
-      memberAuth => {
-        memberRepository.auth(memberAuth).map {
-          case Some(token) => Ok(Json.toJson(token))
-          case None => BadRequest("Invalid username or password")
-        }.recover(controllerUtils.logAndInternalServerError)
-      }
-    )
+      memberResult.fold(
+        controllerUtils.badRequest,
+        memberAuth => {
+          memberRepository.auth(memberAuth).map {
+            case Some(token) => Ok(Json.toJson(token))
+            case None => BadRequest("Invalid username or password")
+          }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
   }
 
   // Display all Member elements with GET /members
@@ -60,28 +60,27 @@ class MemberController @Inject() (
   }
 
   // Delete with DELETE /member/"id"
-  def deleteMember(username : String): Action[JsValue] =  appAction.async(parse.json) { request =>
-    if (checkUserPermissions(request.username, username))
-      memberRepository.deleteOne(username)
-        .map {
-          case Some(_) => NoContent
-          case None => NotFound
-        }.recover(controllerUtils.logAndInternalServerError)
-    else Future.successful(Forbidden)
+  def deleteMember(username : String): Action[JsValue] = appAction.async(parse.json) { request =>
+    memberRepository.delete(username, request.username)
+      .map {
+        case Right(_) => NoContent
+        case Left(_: NotFoundException) => NotFound
+        case Left(_: ForbiddenException) => Forbidden
+      }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Add with POST /members
   def createNewMember: Action[JsValue] = Action.async(parse.json) { request =>
-    val memberResult = request.body.validate[Member]
-    memberResult.fold(
-      controllerUtils.badRequest,
-      member => {
-        memberRepository.createOne(member).map {
-          case Some(createdMember) => Ok(Json.toJson(createdMember))
-          case None => BadRequest("Username already exists")
-        }.recover(controllerUtils.logAndInternalServerError)
-      }
-    )
+    request.body.validate[Member]
+      .fold(
+        controllerUtils.badRequest,
+        member => {
+          memberRepository.createOne(member).map {
+            case Some(createdMember) => Ok(Json.toJson(createdMember))
+            case None => BadRequest("Username already exists")
+          }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
   }
 
   // Update with PUT /member/"username"
@@ -90,21 +89,13 @@ class MemberController @Inject() (
       .fold(
         controllerUtils.badRequest,
         memberUpdateRequest => {
-          memberRepository.findByUsername(username)
-            .flatMap{
-              case Some(member) => {
-                if (checkUserPermissions(request.username, username) && bcryptService.checkPassword(memberUpdateRequest.password, member.password))
-                  memberRepository.updateOne(username, memberUpdateRequest)
-                    .map {
-                      case Some(_) => NoContent
-                    }.recover(controllerUtils.logAndInternalServerError)
-                else Future.successful(Unauthorized)
-              }
-              case None => Future.successful(NotFound)
-            }
+          memberRepository.update(username, request.username, memberUpdateRequest)
+            .map {
+              case Right(_) => NoContent
+              case Left(_: NotFoundException) => NotFound
+              case Left(_: ForbiddenException) => Forbidden
+            }.recover(controllerUtils.logAndInternalServerError)
         }
       )
   }
-
-  private def checkUserPermissions (tokenUsername : String, username : String) : Boolean = tokenUsername == username
 }
