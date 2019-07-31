@@ -117,11 +117,11 @@ class MongoTaskRepository @Inject() (
                   .map {
                     case Some(_) => Right()
                   }
-              case None => Future.successful(Left(NotFoundException()))
-              case _ => Future.successful(Left(ForbiddenException()))
+              case None => Future.successful(Left(NotFoundException("Task not found")))
+              case _ => Future.successful(Left(ForbiddenException("You don't have access to this Task")))
             }
-        case None => Future.successful(Left(NotFoundException()))
-        case _ => Future.successful(Left(ForbiddenException()))
+        case None => Future.successful(Left(NotFoundException("List not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this List")))
       }
   }
   private def isUsernameContainedInTask (username: String, task: Task): Boolean = task.membersUsername.contains(username)

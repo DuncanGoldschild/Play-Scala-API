@@ -90,8 +90,8 @@ class TaskController @Inject() (
         taskRepository.update(id, taskUpdateRequest, request.username)
           .map {
             case Right(_) => NoContent
-            case Left(a: NotFoundException) => NotFound(a.getMessage)
-            case Left(a: ForbiddenException) => Forbidden(a.getMessage)
+            case Left(exception: NotFoundException) => NotFound(exception.message)
+            case Left(exception: ForbiddenException) => Forbidden(exception.message)
           }.recover(controllerUtils.logAndInternalServerError)
       }
     )
