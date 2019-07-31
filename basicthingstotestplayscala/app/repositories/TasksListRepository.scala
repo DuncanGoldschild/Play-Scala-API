@@ -6,11 +6,11 @@ import javax.inject._
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.BSONObjectID
-import models.{ForbiddenException, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import models.{BadRequestException, ForbiddenException, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
 
 
-class MongoListTaskRepository @Inject() (
+class MongoTasksListRepository @Inject()(
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
                                        boardRepository: MongoBoardRepository
@@ -42,7 +42,7 @@ class MongoListTaskRepository @Inject() (
             .map {
               createdListTask => Right(createdListTask)
             }
-        case None => Future.successful(Left(NotFoundException()))
+        case None => Future.successful(Left(BadRequestException()))
         case _ => Future.successful(Left(ForbiddenException()))
       }
   }
@@ -81,7 +81,4 @@ class MongoListTaskRepository @Inject() (
         case _ => Future.successful(Left(ForbiddenException()))
       }
   }
-
-  private def isUsernameContainedInTasksList (username: String, tasksList: TasksList): Boolean = tasksList.membersUsername.contains(username)
-
 }

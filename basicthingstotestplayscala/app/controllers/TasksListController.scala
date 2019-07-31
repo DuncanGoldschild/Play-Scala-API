@@ -11,8 +11,8 @@ import play.api.mvc.{Action, _}
 import play.api.libs.json._
 import play.api.Logger
 import com.google.inject.Singleton
-import repositories.MongoListTaskRepository
-import models.{ForbiddenException, NotFoundException, TasksListCreationRequest, TasksListUpdateRequest}
+import repositories.MongoTasksListRepository
+import models.{BadRequestException, ForbiddenException, NotFoundException, TasksListCreationRequest, TasksListUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -22,10 +22,10 @@ import utils.{AppAction, ControllerUtils, UserRequest}
   */
 @Singleton
 class TasksListController @Inject()(
-                                  components: ControllerComponents,
-                                  listTaskRepository: MongoListTaskRepository,
-                                  controllerUtils: ControllerUtils,
-                                  appAction: AppAction
+                                     components: ControllerComponents,
+                                     listTaskRepository: MongoTasksListRepository,
+                                     controllerUtils: ControllerUtils,
+                                     appAction: AppAction
                                 ) extends AbstractController(components) {
 
   // Display the ListTask by its id with GET /list/"id"
@@ -64,7 +64,7 @@ class TasksListController @Inject()(
           listTaskRepository.create(listToCreate, request.username).map {
             case Right (createdTasksList) => Ok(Json.toJson(createdTasksList))
             case Left (_: ForbiddenException) => Forbidden("You dont have access to this board")
-            case Left (_: NotFoundException) => NotFound("Board id not found")
+            case Left (_: BadRequestException) => BadRequest("Board does not exist")
           }.recover(controllerUtils.logAndInternalServerError)
         }
       )

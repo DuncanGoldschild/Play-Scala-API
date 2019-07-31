@@ -42,6 +42,7 @@ GET     /tasks                      controllers.TaskController.allTasks
 POST    /tasks                      controllers.TaskController.createNewTask
 GET     /task/:id                   controllers.TaskController.findTaskById(id : String)
 PUT     /task/:id                   controllers.TaskController.updateTask(id : String)
+PUT     /task/:id/archive           controllers.TaskController.archiveTask(id : String)
 DELETE  /task/:id                   controllers.TaskController.deleteTask(id : String)
 
 #Member Request

@@ -6,14 +6,15 @@ import javax.inject._
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.BSONObjectID
-import models.{ForbiddenException, NotArchivedException, NotFoundException, Task, TaskCreationRequest, TaskUpdateRequest}
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import models.{BadRequestException, ForbiddenException, NotArchivedException, NotFoundException, Task, TaskCreationRequest, TaskUpdateRequest}
 
 
 
 class MongoTaskRepository @Inject() (
                                        components: ControllerComponents,
-                                       val reactiveMongoApi: ReactiveMongoApi
+                                       val reactiveMongoApi: ReactiveMongoApi,
+                                       tasksListRepository : MongoTasksListRepository
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -36,6 +37,49 @@ class MongoTaskRepository @Inject() (
 
   def findOne(id: String): Future[Option[Task]] = {
     collection.flatMap(_.find(idSelector(id)).one[Task])
+  }
+
+  def archiveOne (id: String): Future[Option[Unit]]  = {
+    collection.flatMap(_.findAndUpdate(
+      idSelector(id),
+      BSONDocument("$set" -> BSONDocument("archived" -> true)),
+      fetchNewObject = true)
+      .map{
+        _.result[Task]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
+  def archive(id: String, username : String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) => tasksListRepository.findOne(task.listId)
+          .flatMap {
+            case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+              archiveOne(id)
+                .map {
+                  _ => Right()
+                }
+            case None => Future.successful(Left(BadRequestException()))
+            case _ => Future.successful(Left(ForbiddenException()))
+          }
+        case None => Future.successful(Left(NotFoundException()))
+      }
+  }
+
+  def create(newTask: TaskCreationRequest, username : String): Future[Either[Exception, Task]] = {
+    tasksListRepository.findOne(newTask.listId)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          createOne(newTask, username)
+            .map {
+              createdTask => Right(createdTask)
+            }
+        case None => Future.successful(Left(BadRequestException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
   }
 
   def delete (taskId : String, username : String) : Future[Either[Exception, Unit]] = {
@@ -63,12 +107,18 @@ class MongoTaskRepository @Inject() (
   }
 
   def update (taskUpdateRequestId : String, taskUpdateRequest: TaskUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
-    findOne(taskUpdateRequestId)
+    tasksListRepository.findOne(taskUpdateRequest.listId)
       .flatMap {
-        case Some(task: Task) if isUsernameContainedInTask(username, task) =>
-          updateOne(taskUpdateRequestId, taskUpdateRequest)
-            .map {
-              case Some (_) => Right()
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          findOne(taskUpdateRequestId)
+            .flatMap {
+              case Some(task: Task) if isUsernameContainedInTask(username, task) =>
+                updateOne(taskUpdateRequestId, taskUpdateRequest)
+                  .map {
+                    case Some(_) => Right()
+                  }
+              case None => Future.successful(Left(NotFoundException()))
+              case _ => Future.successful(Left(ForbiddenException()))
             }
         case None => Future.successful(Left(NotFoundException()))
         case _ => Future.successful(Left(ForbiddenException()))

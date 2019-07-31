@@ -2,20 +2,15 @@ package controllers
 
 
 import scala.concurrent._
-
 import javax.inject._
 
 import ExecutionContext.Implicits.global
 import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
-
 import repositories.MongoTaskRepository
-
-import models.{ForbiddenException, NotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
-
+import models.{BadRequestException, ForbiddenException, NotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
 import services.JwtGenerator
-
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -66,13 +61,25 @@ class TaskController @Inject() (
     val taskResult = request.body.validate[TaskCreationRequest]
     taskResult.fold(
         controllerUtils.badRequest,
-      task => {
-        taskRepository.createOne(task, request.username).map {
-          createdTask => Ok(Json.toJson(createdTask))
+      newTask => {
+        taskRepository.create(newTask, request.username).map {
+          case Right (createdTasksList) => Ok(Json.toJson(createdTasksList))
+          case Left (_: ForbiddenException) => Forbidden("You dont have access to this List")
+          case Left (_: BadRequestException) => BadRequest("List does not exist")
         }.recover(controllerUtils.logAndInternalServerError)
       }
     )
   }
+  //Archive with PUT /task/"id"/archive
+  def archiveTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
+        taskRepository.archive(id, request.username)
+          .map {
+            case Right(_) => NoContent
+            case Left(_: NotFoundException) => NotFound
+            case Left(_: ForbiddenException) => Forbidden
+            case Left(_: BadRequestException) => BadRequest
+          }.recover(controllerUtils.logAndInternalServerError)
+      }
 
   // Update with PUT /task/"id"
   def updateTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
@@ -83,8 +90,8 @@ class TaskController @Inject() (
         taskRepository.update(id, taskUpdateRequest, request.username)
           .map {
             case Right(_) => NoContent
-            case Left(_: NotFoundException) => NotFound
-            case Left(_: ForbiddenException) => Forbidden
+            case Left(a: NotFoundException) => NotFound(a.getMessage)
+            case Left(a: ForbiddenException) => Forbidden(a.getMessage)
           }.recover(controllerUtils.logAndInternalServerError)
       }
     )

@@ -1,6 +1,6 @@
 package repositories
 
-import models.Board
+import models.{Board, TasksList}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -47,5 +47,7 @@ trait GenericCRUDRepository [A] {
     if (writeResult.n == 1 && writeResult.ok) Some() else None
 
   def isUsernameContainedInBoard (username: String, board: Board): Boolean = board.membersUsername.contains(username)
+
+  def isUsernameContainedInTasksList (username: String, tasksList: TasksList): Boolean = tasksList.membersUsername.contains(username)
 
 }
