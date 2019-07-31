@@ -1,4 +1,4 @@
-package models
+/*package models
 
 import reactivemongo.bson._
 
@@ -8,7 +8,6 @@ case class FoodWithoutId(name : String)
 
 object FoodWithoutId {
 
-  implicit val foodWithoutIdReader: BSONDocumentReader[FoodWithoutId] = Macros.reader[FoodWithoutId]
   implicit val foodWithoutIdReads: Reads[FoodWithoutId] = Json.reads[FoodWithoutId]
 
 }
@@ -23,4 +22,4 @@ object Food {
   implicit val foodWrites: Writes[Food] = Json.writes[Food]
   implicit val foodReads: Reads[Food] = Json.reads[Food]
 
-}
+}*/

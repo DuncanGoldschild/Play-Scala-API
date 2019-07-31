@@ -11,19 +11,11 @@ routesGenerator := InjectedRoutesGenerator
 
 // only for Play 2.7.x (Scala 2.12)
 libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play27"
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play27",
+  "com.pauldijou"     %% "jwt-core"                          % "3.1.0"
 )
 
-// only for Play 2.6.x (Scala 2.12)
-libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play26"
-)
-
-// only for Play 2.5.x (Scala 2.11)
-libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play25"
-)
-
+libraryDependencies +=  "org.mindrot" % "jbcrypt" % "0.3m"
 libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test
 

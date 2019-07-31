@@ -1,4 +1,4 @@
-package repositories
+/*package repositories
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -80,4 +80,4 @@ class MongoFoodRepository @Inject() (
 
   def verifyUpdatedOneDocument(writeResult: WriteResult): Option[Unit] =
     if (writeResult.n == 1 && writeResult.ok) Some() else None
-}
+}*/
