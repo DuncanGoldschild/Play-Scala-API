@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
-import models.{BadRequestException, ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
+import models.{ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
 import services.{BCryptServiceImpl, JwtGenerator}
 
 

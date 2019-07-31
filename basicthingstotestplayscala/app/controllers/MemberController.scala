@@ -7,12 +7,11 @@ import javax.inject._
 import ExecutionContext.Implicits.global
 import play.api.mvc._
 import play.api.libs.json._
-import play.api.Logger
 import com.google.inject.Singleton
 import repositories.MongoMemberRepository
 import services.{BCryptServiceImpl, JwtGenerator}
 import models.{ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
-import utils.{AppAction, ControllerUtils, UserRequest}
+import utils.{AppAction, ControllerUtils}
 
 /**
   * This controller creates an `Action` to handle HTTP requests to the
@@ -27,8 +26,6 @@ class MemberController @Inject() (
                                   appAction: AppAction,
                                   bcryptService: BCryptServiceImpl
                                 ) extends AbstractController(components) {
-
-  private val logger = Logger(this.getClass)
 
   // Display the Member by its id with GET /member/"id"
   def findMemberById(username: String): Action[AnyContent] = appAction.async {
