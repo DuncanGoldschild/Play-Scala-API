@@ -7,14 +7,15 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
-import models.{Member, MemberUpdateRequest}
-import services.BCryptServiceImpl
+import models.{BadRequestException, Member, MemberUpdateRequest}
+import services.{BCryptServiceImpl, JwtGenerator}
 
 
 class MongoMemberRepository @Inject() (
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
-                                       bcryptService : BCryptServiceImpl
+                                       bcryptService : BCryptServiceImpl,
+                                       jwtService : JwtGenerator
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -34,6 +35,13 @@ class MongoMemberRepository @Inject() (
         }
         case Some(_) => Future.successful(None)
       }
+  }
+
+  def auth (memberAuth: Member) : Future[Option[String]] = {
+    findByUsername(memberAuth.username).map {
+      case Some(member) if bcryptService.checkPassword(memberAuth.password, member.password) => Some(jwtService.generateToken(member.username))
+      case _ => None
+    }
   }
 
   def updateOne (username: String, newMember: MemberUpdateRequest): Future[Option[Unit]] = {

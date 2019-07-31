@@ -63,8 +63,8 @@ class TasksListController @Inject()(
         listToCreate => {
           listTaskRepository.create(listToCreate, request.username).map {
             case Right (createdTasksList) => Ok(Json.toJson(createdTasksList))
-            case Left (_: ForbiddenException) => Forbidden("You dont have access to this board")
-            case Left (_: BadRequestException) => BadRequest("Board does not exist")
+            case Left (exception: ForbiddenException) => Forbidden(exception.message)
+            case Left (exception: BadRequestException) => BadRequest(exception.message)
           }.recover(controllerUtils.logAndInternalServerError)
         }
       )

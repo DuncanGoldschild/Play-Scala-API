@@ -92,6 +92,7 @@ class TaskController @Inject() (
             case Right(_) => NoContent
             case Left(exception: NotFoundException) => NotFound(exception.message)
             case Left(exception: ForbiddenException) => Forbidden(exception.message)
+            case Left(exception: BadRequestException) => BadRequest(exception.message)
           }.recover(controllerUtils.logAndInternalServerError)
       }
     )

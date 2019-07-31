@@ -42,8 +42,8 @@ class MongoTasksListRepository @Inject()(
             .map {
               createdListTask => Right(createdListTask)
             }
-        case None => Future.successful(Left(BadRequestException()))
-        case _ => Future.successful(Left(ForbiddenException()))
+        case None => Future.successful(Left(BadRequestException("Board does not exist")))
+        case _ => Future.successful(Left(ForbiddenException("You dont have access to this board")))
       }
   }
 

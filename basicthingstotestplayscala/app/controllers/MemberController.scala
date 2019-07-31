@@ -44,11 +44,9 @@ class MemberController @Inject() (
     memberResult.fold(
       controllerUtils.badRequest,
       memberAuth => {
-        memberRepository.findByUsername(memberAuth.username).map {
-          case Some(member) =>
-            if (bcryptService.checkPassword(memberAuth.password, member.password)) Ok(Json.toJson(jwtService.generateToken(member.username)))
-            else Unauthorized
-          case None => NotFound
+        memberRepository.auth(memberAuth).map {
+          case Some(token) => Ok(Json.toJson(token))
+          case None => BadRequest("Invalid username or password")
         }.recover(controllerUtils.logAndInternalServerError)
       }
     )
@@ -69,7 +67,7 @@ class MemberController @Inject() (
           case Some(_) => NoContent
           case None => NotFound
         }.recover(controllerUtils.logAndInternalServerError)
-    else Future.successful(Unauthorized)
+    else Future.successful(Forbidden)
   }
 
   // Add with POST /members
