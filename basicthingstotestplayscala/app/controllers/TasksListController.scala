@@ -7,13 +7,13 @@ import javax.inject._
 
 import ExecutionContext.Implicits.global
 import reactivemongo.play.json._
-import play.api.mvc._
+import play.api.mvc.{Action, _}
 import play.api.libs.json._
 import play.api.Logger
 import com.google.inject.Singleton
 import repositories.MongoListTaskRepository
-import models.{TasksListCreationRequest, TasksListUpdateRequest}
-import utils.{AppAction, ControllerUtils}
+import models.{ForbiddenException, NotFoundException, TasksListCreationRequest, TasksListUpdateRequest}
+import utils.{AppAction, ControllerUtils, UserRequest}
 
 
 /**
@@ -28,44 +28,46 @@ class TasksListController @Inject()(
                                   appAction: AppAction
                                 ) extends AbstractController(components) {
 
-  private val logger = Logger(this.getClass)
-
   // Display the ListTask by its id with GET /list/"id"
-  def findListTaskById(id: String): Action[AnyContent] = appAction.async {
-    listTaskRepository.findOne(id)
+  def findListTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request : UserRequest[JsValue] =>
+    listTaskRepository.find(id, request.username)
       .map {
-        case Some(listTask) => Ok(Json.toJson(listTask))
-        case None => NotFound
+        case Right(list) => Ok(Json.toJson(list))
+        case Left(_: NotFoundException) => NotFound
+        case Left(_: ForbiddenException) => Forbidden
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Display all ListTask elements with GET /lists
-  def allListTasks: Action[AnyContent] = appAction.async {
-    listTaskRepository.listAll.map {
+  def allListTasks: Action[AnyContent] = appAction.async { request =>
+    listTaskRepository.listAllFromUsername(request.username).map {
       list => Ok(Json.toJson(list))
     }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Delete with DELETE /list/"id"
-  def deleteListTask(id : String): Action[AnyContent] =  appAction.async {
-    listTaskRepository.deleteOne(id)
-      .map {
-        case Some(_) => NoContent
-        case None => NotFound
-      }.recover(controllerUtils.logAndInternalServerError)
+  def deleteListTask(id : String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  listTaskRepository.delete(id, request.username)
+    .map {
+      case Right(_) => NoContent
+      case Left(_: NotFoundException) => NotFound
+      case Left(_: ForbiddenException) => Forbidden
+    }.recover(controllerUtils.logAndInternalServerError)
   }
 
   // Add with POST /lists
   def createNewListTask: Action[JsValue] = appAction.async(parse.json) { request =>
-    val listTaskResult = request.body.validate[TasksListCreationRequest]
-    listTaskResult.fold(
-      controllerUtils.badRequest,
-      listToCreate => {
-        listTaskRepository.createOne(listToCreate, request.username).map {
-          createdListTask => Ok(Json.toJson(createdListTask))
-        }.recover(controllerUtils.logAndInternalServerError)
-      }
-    )
+    request.body.validate[TasksListCreationRequest]
+      .fold(
+        controllerUtils.badRequest,
+        listToCreate => {
+          listTaskRepository.create(listToCreate, request.username).map {
+            case Right (createdTasksList) => Ok(Json.toJson(createdTasksList))
+            case Left (_: ForbiddenException) => Forbidden("You dont have access to this board")
+            case Left (_: NotFoundException) => NotFound("Board id not found")
+          }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
   }
 
   // Update with PUT /list/"id"
@@ -74,10 +76,11 @@ class TasksListController @Inject()(
     listTaskResult.fold(
       controllerUtils.badRequest,
       listToUpdate => {
-        listTaskRepository.updateOne(id,listToUpdate)
+        listTaskRepository.update(id,listToUpdate, request.username)
           .map {
-            case Some(_) => NoContent
-            case None => NotFound
+            case Right(_) => NoContent
+            case Left(_: NotFoundException) => NotFound
+            case Left(_: ForbiddenException) => Forbidden
           }.recover(controllerUtils.logAndInternalServerError)
       }
     )

@@ -40,8 +40,12 @@ trait GenericCRUDRepository [A] {
       .map(verifyUpdatedOneDocument)
   }
 
+
   def idSelector (id: String) = BSONDocument("id" -> id)
 
   def verifyUpdatedOneDocument(writeResult: WriteResult): Option[Unit] =
     if (writeResult.n == 1 && writeResult.ok) Some() else None
+
+  def isUsernameContainedInBoard (username: String, board: Board): Boolean = board.membersUsername.contains(username)
+
 }

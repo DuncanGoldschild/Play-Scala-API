@@ -47,7 +47,7 @@ object TasksListCreationRequest{
 
 }
 
-case class TasksListUpdateRequest(label: String, boardId: String, membersUsername: Seq[String])
+case class TasksListUpdateRequest(label: String, membersUsername: Seq[String])
 object TasksListUpdateRequest{
 
   implicit val listUpdateRequestReads: Reads[TasksListUpdateRequest] = Json.reads[TasksListUpdateRequest]

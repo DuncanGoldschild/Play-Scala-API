@@ -67,7 +67,7 @@ class TaskController @Inject() (
     taskResult.fold(
         controllerUtils.badRequest,
       task => {
-        taskRepository.createOne(task, "Pierrot").map {
+        taskRepository.createOne(task, request.username).map {
           createdTask => Ok(Json.toJson(createdTask))
         }.recover(controllerUtils.logAndInternalServerError)
       }

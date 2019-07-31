@@ -7,12 +7,13 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
-import models.{TasksList, TasksListCreationRequest, TasksListUpdateRequest}
+import models.{ForbiddenException, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
 
 
 class MongoListTaskRepository @Inject() (
                                        components: ControllerComponents,
-                                       val reactiveMongoApi: ReactiveMongoApi
+                                       val reactiveMongoApi: ReactiveMongoApi,
+                                       boardRepository: MongoBoardRepository
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -27,10 +28,60 @@ class MongoListTaskRepository @Inject() (
   }
 
 
-  def updateOne (id: String, newListTask: TasksListUpdateRequest): Future[Option[Unit]] = {
-    val updatedListTask = TasksList(id, newListTask.label, newListTask.boardId, newListTask.membersUsername)
+  def updateOne (id: String, newListTask: TasksListUpdateRequest, boardId : String): Future[Option[Unit]] = {
+    val updatedListTask = TasksList(id, newListTask.label, boardId, newListTask.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedListTask, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
+
+  def create(newListTask: TasksListCreationRequest, username : String): Future[Either[Exception, TasksList]] = {
+    boardRepository.findOne(newListTask.boardId)
+      .flatMap {
+        case Some(board) if isUsernameContainedInBoard(username, board) =>
+          createOne(newListTask, username)
+            .map {
+              createdListTask => Right(createdListTask)
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def update (tasksListUpdateRequestId : String, tasksListUpdateRequest: TasksListUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+    findOne(tasksListUpdateRequestId)
+      .flatMap {
+        case Some(tasksList: TasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          updateOne(tasksListUpdateRequestId, tasksListUpdateRequest, tasksList.boardId)
+            .map {
+              case Some (_) => Right()
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def delete (tasksListId : String, username : String) : Future[Either[Exception, Unit]] = {
+    findOne(tasksListId)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          deleteOne(tasksListId)
+            .map {
+              case Some (_) => Right()
+            }
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def find (tasksListId : String, username : String) : Future[Either[Exception, TasksList]] = {
+    findOne(tasksListId)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) => Future.successful(Right(tasksList))
+        case None => Future.successful(Left(NotFoundException()))
+        case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  private def isUsernameContainedInTasksList (username: String, tasksList: TasksList): Boolean = tasksList.membersUsername.contains(username)
 
 }

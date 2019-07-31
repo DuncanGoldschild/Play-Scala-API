@@ -66,7 +66,4 @@ class MongoBoardRepository @Inject() (
         case _ => Future.successful(Left(ForbiddenException()))
       }
   }
-
-  private def isUsernameContainedInBoard (username: String, board: Board): Boolean = board.membersUsername.contains(username)
-
 }
