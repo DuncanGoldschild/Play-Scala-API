@@ -9,7 +9,6 @@ import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONObjectID
 import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
 
-
 class MongoBoardRepository @Inject() (
                                       components: ControllerComponents,
                                       val reactiveMongoApi: ReactiveMongoApi
@@ -21,7 +20,7 @@ class MongoBoardRepository @Inject() (
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("board"))
 
-  def createOne(newBoard: BoardCreationRequest, username : String): Future[Board] = {
+  def createOne(newBoard: BoardCreationRequest, username: String): Future[Board] = {
     val insertedBoard = Board(BSONObjectID.generate().stringify, newBoard.label, Seq(username))
     collection.flatMap(_.insert.one(insertedBoard)).map { _ => insertedBoard }
   }
@@ -32,7 +31,7 @@ class MongoBoardRepository @Inject() (
       .map (verifyUpdatedOneDocument)
   }
 
-  def update (boardUpdateRequestId : String, boardUpdateRequest: BoardUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+  def update (boardUpdateRequestId: String, boardUpdateRequest: BoardUpdateRequest, username: String): Future[Either[Exception, Unit]] = {
     findOne(boardUpdateRequestId)
       .flatMap {
         case Some(board: Board) if isUsernameContainedInBoard(username, board) =>
@@ -45,7 +44,7 @@ class MongoBoardRepository @Inject() (
       }
   }
 
-  def delete (boardId : String, username : String) : Future[Either[Exception, Unit]] = {
+  def delete (boardId: String, username: String): Future[Either[Exception, Unit]] = {
     findOne(boardId)
       .flatMap {
         case Some(board) if isUsernameContainedInBoard(username, board) =>
@@ -58,7 +57,7 @@ class MongoBoardRepository @Inject() (
       }
   }
 
-  def find (boardId : String, username : String) : Future[Either[Exception, Board]] = {
+  def find (boardId: String, username: String): Future[Either[Exception, Board]] = {
     findOne(boardId)
       .flatMap {
         case Some(board) if isUsernameContainedInBoard(username, board) => Future.successful(Right(board))

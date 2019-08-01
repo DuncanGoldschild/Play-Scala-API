@@ -22,19 +22,19 @@ class MongoTasksListRepository @Inject()(
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("listTask"))
 
-  def createOne(newListTask: TasksListCreationRequest, username : String): Future[TasksList] = {
+  def createOne(newListTask: TasksListCreationRequest, username: String): Future[TasksList] = {
     val insertedListTask = TasksList(BSONObjectID.generate().stringify, newListTask.label, newListTask.boardId, Seq(username))
     collection.flatMap(_.insert.one(insertedListTask)).map { _ => insertedListTask }
   }
 
 
-  def updateOne (id: String, newListTask: TasksListUpdateRequest, boardId : String): Future[Option[Unit]] = {
+  def updateOne (id: String, newListTask: TasksListUpdateRequest, boardId: String): Future[Option[Unit]] = {
     val updatedListTask = TasksList(id, newListTask.label, boardId, newListTask.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedListTask, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
 
-  def create(newListTask: TasksListCreationRequest, username : String): Future[Either[Exception, TasksList]] = {
+  def create(newListTask: TasksListCreationRequest, username: String): Future[Either[Exception, TasksList]] = {
     boardRepository.findOne(newListTask.boardId)
       .flatMap {
         case Some(board) if isUsernameContainedInBoard(username, board) =>
@@ -47,7 +47,7 @@ class MongoTasksListRepository @Inject()(
       }
   }
 
-  def update (tasksListUpdateRequestId : String, tasksListUpdateRequest: TasksListUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+  def update (tasksListUpdateRequestId: String, tasksListUpdateRequest: TasksListUpdateRequest, username: String): Future[Either[Exception, Unit]] = {
     findOne(tasksListUpdateRequestId)
       .flatMap {
         case Some(tasksList: TasksList) if isUsernameContainedInTasksList(username, tasksList) =>
@@ -60,7 +60,7 @@ class MongoTasksListRepository @Inject()(
       }
   }
 
-  def delete (tasksListId : String, username : String) : Future[Either[Exception, Unit]] = {
+  def delete (tasksListId: String, username: String): Future[Either[Exception, Unit]] = {
     findOne(tasksListId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
@@ -73,7 +73,7 @@ class MongoTasksListRepository @Inject()(
       }
   }
 
-  def find (tasksListId : String, username : String) : Future[Either[Exception, TasksList]] = {
+  def find (tasksListId: String, username: String): Future[Either[Exception, TasksList]] = {
     findOne(tasksListId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) => Future.successful(Right(tasksList))

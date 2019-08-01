@@ -4,7 +4,7 @@ import reactivemongo.bson._
 
 import play.api.libs.json._
 
-case class FoodWithoutId(name : String)
+case class FoodWithoutId(name: String)
 
 object FoodWithoutId {
 
@@ -12,7 +12,7 @@ object FoodWithoutId {
 
 }
 
-case class Food(id : String, name: String)
+case class Food(id: String, name: String)
 
 object Food {
 

@@ -25,11 +25,11 @@ sealed trait FoodRepository {
 
     def findOne(id: String): Future[Option[Food]]
 
-    def updateOne(id: String , newFood : FoodWithoutId): Future[Option[Unit]]
+    def updateOne(id: String , newFood: FoodWithoutId): Future[Option[Unit]]
 
     def deleteOne(id: String): Future[Option[Unit]]
 
-    def createOne(newFood : FoodWithoutId): Future[Food]
+    def createOne(newFood: FoodWithoutId): Future[Food]
 
 }
 
@@ -44,7 +44,7 @@ class MongoFoodRepository @Inject() (
     def collection: Future[BSONCollection] =
         database.map(_.collection[BSONCollection]("food"))
 
-    override def listAll : Future[List[Food]] = {
+    override def listAll: Future[List[Food]] = {
       listAll(-1)
     }
          

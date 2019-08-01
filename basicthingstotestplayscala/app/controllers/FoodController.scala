@@ -33,7 +33,7 @@ class FoodController @Inject() (
 
   private val logger = Logger(this.getClass)
 
-// Display the Food by its id with GET /food/"id"
+// Display the Food by its id with GET /food/{id}
   def findById(id: String): Action[AnyContent] = appAction.async {
   foodRepository.findOne(id)
     .map {
@@ -49,8 +49,8 @@ class FoodController @Inject() (
     }.recover(logAndInternalServerError)
   }
 
-  // Delete with DELETE /food/"id"
-  def deleteFood(id : String): Action[AnyContent] =  appAction.async {
+  // Delete with DELETE /food/{id}
+  def deleteFood(id: String): Action[AnyContent] =  appAction.async {
     foodRepository.deleteOne(id)
     .map {
       case Some(_) => NoContent
@@ -73,8 +73,8 @@ class FoodController @Inject() (
       )
   } 
 
-  // Update with PUT /food/"id"
-  def updateFood(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
+  // Update with PUT /food/{id}
+  def updateFood(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     val foodResult = request.body.validate[FoodWithoutId]
     foodResult.fold(
       errors => {
@@ -90,12 +90,12 @@ class FoodController @Inject() (
     )
   }
 
-  private def badRequest (errors : Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
+  private def badRequest (errors: Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
     Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
   }
 
   private def logAndInternalServerError: PartialFunction[Throwable, Result] = {
-    case e : Throwable =>
+    case e: Throwable =>
       logger.error(e.getMessage, e)
       InternalServerError
 

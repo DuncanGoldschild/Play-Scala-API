@@ -9,7 +9,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.MongoMemberRepository
-import services.{BCryptServiceImpl, JwtGenerator}
+import services.{BCryptServiceImpl}
 import models.{ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
 import utils.{AppAction, ControllerUtils}
 
@@ -21,13 +21,12 @@ import utils.{AppAction, ControllerUtils}
 class MemberController @Inject() (
                                   components: ControllerComponents,
                                   memberRepository: MongoMemberRepository,
-                                  jwtService : JwtGenerator,
-                                  controllerUtils: ControllerUtils,
-                                  appAction: AppAction,
-                                  bcryptService: BCryptServiceImpl
-                                ) extends AbstractController(components) {
+                                  appAction: AppAction
+                                 ) extends AbstractController(components) {
 
-  // Display the Member by its id with GET /member/"id"
+  val controllerUtils = new ControllerUtils(components)
+
+  // Display the Member by its username with GET /member/{username}
   def findMemberById(username: String): Action[AnyContent] = appAction.async {
     memberRepository.findOne(username)
       .map {
@@ -36,7 +35,7 @@ class MemberController @Inject() (
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
-  def authMember : Action[JsValue] = Action.async(parse.json) { request =>
+  def authMember: Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[Member]
       memberResult.fold(
         controllerUtils.badRequest,
@@ -56,8 +55,8 @@ class MemberController @Inject() (
     }.recover(controllerUtils.logAndInternalServerError)
   }
 
-  // Delete with DELETE /member/"id"
-  def deleteMember(username : String): Action[JsValue] = appAction.async(parse.json) { request =>
+  // Delete with DELETE /member/{username}
+  def deleteMember(username: String): Action[JsValue] = appAction.async(parse.json) { request =>
     memberRepository.delete(username, request.username)
       .map {
         case Right(_) => NoContent
@@ -73,15 +72,15 @@ class MemberController @Inject() (
         controllerUtils.badRequest,
         member => {
           memberRepository.createOne(member).map {
-            case Some(createdMember) => Ok(Json.toJson(createdMember))
+            case Some(createdMember) => Created(Json.toJson(createdMember))
             case None => BadRequest("Username already exists")
           }.recover(controllerUtils.logAndInternalServerError)
         }
       )
   }
 
-  // Update with PUT /member/"username"
-  def updateMember(username : String): Action[JsValue] = appAction.async(parse.json) { request =>
+  // Update with PUT /member/{username}
+  def updateMember(username: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[MemberUpdateRequest]
       .fold(
         controllerUtils.badRequest,

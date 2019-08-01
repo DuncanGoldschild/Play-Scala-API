@@ -9,7 +9,6 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.{MongoBoardRepository, MongoMemberRepository}
-import services.JwtGenerator
 import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
@@ -19,13 +18,13 @@ class BoardController @Inject() (
                                  components: ControllerComponents,
                                  boardRepository: MongoBoardRepository,
                                  memberRepository: MongoMemberRepository,
-                                 jwtService: JwtGenerator,
-                                 controllerUtils: ControllerUtils,
                                  appAction: AppAction
                                ) extends AbstractController(components) {
 
-  // Returns a JSON of the board by its id with GET /board/"id"
-  def findBoardById(id: String): Action[JsValue] = appAction.async(parse.json) { request : UserRequest[JsValue] =>
+  val controllerUtils = new ControllerUtils(components)
+
+  // Returns a JSON of the board by its id with GET /board/{id}
+  def findBoardById(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
     boardRepository.find(id, request.username)
       .map {
         case Right(board) => Ok(Json.toJson(board))
@@ -42,7 +41,7 @@ class BoardController @Inject() (
           }.recover(controllerUtils.logAndInternalServerError)
   }
 
-  // Delete with DELETE /board/"id"
+  // Delete with DELETE /board/{id}
   def deleteBoard(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
     boardRepository.delete(id, request.username)
       .map {
@@ -59,13 +58,13 @@ class BoardController @Inject() (
         controllerUtils.badRequest,
         board => {
           boardRepository.createOne(board, request.username).map {
-            createdBoard: Board => Ok(Json.toJson(createdBoard))
+            createdBoard: Board => Created(Json.toJson(createdBoard))
           }.recover(controllerUtils.logAndInternalServerError)
         }
       )
   }
 
-  // Update with PUT /board/"id"
+  // Update with PUT /board/{id}
   def updateBoard(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[BoardUpdateRequest]
       .fold(

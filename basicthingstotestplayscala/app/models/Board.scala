@@ -54,7 +54,7 @@ object TasksListUpdateRequest{
 
 }
 
-case class Task (id: String, label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
+case class Task (id: String, label: String, description: String, archived: Boolean, listId: String, membersUsername: Seq[String])
 object Task {
 
   implicit val taskReader: BSONDocumentReader[Task] = Macros.reader[Task]
@@ -65,14 +65,14 @@ object Task {
 
 }
 
-case class TaskCreationRequest (label: String, description: String, archived : Boolean, listId: String)
+case class TaskCreationRequest (label: String, description: String, archived: Boolean, listId: String)
 object TaskCreationRequest{
 
   implicit val taskCreationRequestReads: Reads[TaskCreationRequest] = Json.reads[TaskCreationRequest]
 
 }
 
-case class TaskUpdateRequest (label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
+case class TaskUpdateRequest (label: String, description: String, archived: Boolean, listId: String, membersUsername: Seq[String])
 object TaskUpdateRequest{
 
   implicit val listUpdateRequestReads: Reads[TaskUpdateRequest] = Json.reads[TaskUpdateRequest]
@@ -90,7 +90,7 @@ object Member {
 
 }
 
-case class MemberUpdateRequest (password: String, newPassword : String)
+case class MemberUpdateRequest (password: String, newPassword: String)
 object MemberUpdateRequest {
 
   implicit val memberUpdateRequestReads: Reads[MemberUpdateRequest] = Json.reads[MemberUpdateRequest]

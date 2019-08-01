@@ -9,7 +9,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
-import models.{BadRequestException, ForbiddenException, NotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
+import models.{BadRequestException, ForbiddenException, TaskNotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
 import services.JwtGenerator
 import utils.{AppAction, ControllerUtils, UserRequest}
 
@@ -22,12 +22,12 @@ import utils.{AppAction, ControllerUtils, UserRequest}
 class TaskController @Inject() (
                                   components: ControllerComponents,
                                   taskRepository: MongoTaskRepository,
-                                  jwtService : JwtGenerator,
-                                  controllerUtils: ControllerUtils,
                                   appAction: AppAction
                                 ) extends AbstractController(components) {
 
-  // Display the task by its id with GET /task/"id"
+  val controllerUtils = new ControllerUtils(components)
+
+  // Display the task by its id with GET /task/{id}
   def findTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     taskRepository.find(id, request.username)
       .map {
@@ -45,14 +45,14 @@ class TaskController @Inject() (
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
-  // Delete with DELETE /task/"id"
-  def deleteTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
+  // Delete with DELETE /task/{id}
+  def deleteTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     taskRepository.delete(id, request.username)
       .map {
         case Right(_) => NoContent
         case Left(_: NotFoundException) => NotFound
         case Left(_: ForbiddenException) => Forbidden
-        case Left(_: NotArchivedException) => Locked
+        case Left(_: TaskNotArchivedException) => Locked
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
@@ -63,26 +63,25 @@ class TaskController @Inject() (
         controllerUtils.badRequest,
       newTask => {
         taskRepository.create(newTask, request.username).map {
-          case Right (createdTasksList) => Ok(Json.toJson(createdTasksList))
-          case Left (_: ForbiddenException) => Forbidden("You dont have access to this List")
+          case Right (createdTasksList) => Created(Json.toJson(createdTasksList))
+          case Left (_: ForbiddenException) => Forbidden("You don't have access to this List")
           case Left (_: BadRequestException) => BadRequest("List does not exist")
         }.recover(controllerUtils.logAndInternalServerError)
       }
     )
   }
-  //Archive with PUT /task/"id"/archive
-  def archiveTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
-        taskRepository.archive(id, request.username)
+  //Archive with PUT /task/{id}/archive
+  def archiveTask(id: String, archiveOrRestore: Boolean): Action[JsValue] = appAction.async(parse.json) { request =>
+        taskRepository.archive(id, request.username, archiveOrRestore)
           .map {
             case Right(_) => NoContent
-            case Left(_: NotFoundException) => NotFound
-            case Left(_: ForbiddenException) => Forbidden
-            case Left(_: BadRequestException) => BadRequest
+            case Left(exception: NotFoundException) => NotFound(exception.message)
+            case Left(exception: ForbiddenException) => Forbidden(exception.message)
           }.recover(controllerUtils.logAndInternalServerError)
       }
 
-  // Update with PUT /task/"id"
-  def updateTask(id : String): Action[JsValue] = appAction.async(parse.json) { request =>
+  // Update with PUT /task/{id}
+  def updateTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskUpdateRequest]
     taskResult.fold(
         controllerUtils.badRequest,

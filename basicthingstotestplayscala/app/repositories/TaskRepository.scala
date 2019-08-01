@@ -7,14 +7,14 @@ import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import models.{BadRequestException, ForbiddenException, NotArchivedException, NotFoundException, Task, TaskCreationRequest, TaskUpdateRequest}
+import models.{BadRequestException, ForbiddenException, TaskNotArchivedException, NotFoundException, Task, TaskCreationRequest, TaskUpdateRequest}
 
 
 
 class MongoTaskRepository @Inject() (
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
-                                       tasksListRepository : MongoTasksListRepository
+                                       tasksListRepository: MongoTasksListRepository
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -39,10 +39,10 @@ class MongoTaskRepository @Inject() (
     collection.flatMap(_.find(idSelector(id)).one[Task])
   }
 
-  def archiveOne (id: String): Future[Option[Unit]]  = {
+  def archiveOne (id: String, archiveOrRestore: Boolean): Future[Option[Unit]]  = {
     collection.flatMap(_.findAndUpdate(
       idSelector(id),
-      BSONDocument("$set" -> BSONDocument("archived" -> true)),
+      BSONDocument("$set" -> BSONDocument("archived" -> archiveOrRestore)),
       fetchNewObject = true)
       .map{
         _.result[Task]
@@ -52,24 +52,21 @@ class MongoTaskRepository @Inject() (
       }
     )
   }
-  def archive(id: String, username : String): Future[Either[Exception, Unit]] = {
+
+  def archive(id: String, username: String, archiveOrRestore: Boolean): Future[Either[Exception, Unit]] = {
     findOne(id)
       .flatMap {
-        case Some(task) => tasksListRepository.findOne(task.listId)
-          .flatMap {
-            case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
-              archiveOne(id)
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+              archiveOne(id, archiveOrRestore)
                 .map {
                   _ => Right()
                 }
-            case None => Future.successful(Left(BadRequestException()))
-            case _ => Future.successful(Left(ForbiddenException()))
-          }
-        case None => Future.successful(Left(NotFoundException()))
+        case None => Future.successful(Left(NotFoundException("Task not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this Task")))
       }
   }
 
-  def create(newTask: TaskCreationRequest, username : String): Future[Either[Exception, Task]] = {
+  def create(newTask: TaskCreationRequest, username: String): Future[Either[Exception, Task]] = {
     tasksListRepository.findOne(newTask.listId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
@@ -82,7 +79,7 @@ class MongoTaskRepository @Inject() (
       }
   }
 
-  def delete (taskId : String, username : String) : Future[Either[Exception, Unit]] = {
+  def delete (taskId: String, username: String): Future[Either[Exception, Unit]] = {
     findOne(taskId)
       .flatMap {
         case Some(task) if isUsernameContainedInTask(username, task) =>
@@ -91,13 +88,13 @@ class MongoTaskRepository @Inject() (
               .map {
                 case Some(_) => Right()
               }
-          } else Future.successful(Left(NotArchivedException()))
+          } else Future.successful(Left(TaskNotArchivedException()))
         case None => Future.successful(Left(NotFoundException()))
         case _ => Future.successful(Left(ForbiddenException()))
       }
   }
 
-  def find (taskId : String, username : String) : Future[Either[Exception, Task]] = {
+  def find (taskId: String, username: String): Future[Either[Exception, Task]] = {
     findOne(taskId)
       .flatMap {
         case Some(task) if isUsernameContainedInTask(username, task) => Future.successful(Right(task))
@@ -106,7 +103,7 @@ class MongoTaskRepository @Inject() (
       }
   }
 
-  def update (taskUpdateRequestId : String, taskUpdateRequest: TaskUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+  def update (taskUpdateRequestId: String, taskUpdateRequest: TaskUpdateRequest, username: String): Future[Either[Exception, Unit]] = {
     tasksListRepository.findOne(taskUpdateRequest.listId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>

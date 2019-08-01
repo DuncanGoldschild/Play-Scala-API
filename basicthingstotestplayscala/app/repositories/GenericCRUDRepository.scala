@@ -11,7 +11,7 @@ import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 
 
 trait GenericCRUDRepository [A] {
-    def collection : Future[BSONCollection]
+    def collection: Future[BSONCollection]
 
   def listAll(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = listAll(-1)
 
