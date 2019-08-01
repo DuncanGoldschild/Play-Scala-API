@@ -5,7 +5,7 @@ import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{JsError, JsPath, Json, JsonValidationError}
 import play.api.mvc._
-import services.{BCryptServiceImpl, JwtGenerator}
+import services.{BCryptServiceImpl, JwtServiceImpl}
 
 import scala.collection.Seq
 import scala.concurrent._
@@ -13,7 +13,7 @@ import scala.concurrent._
 class ControllerUtils @Inject() (
                                   components: ControllerComponents
                                 ) extends AbstractController(components) {
-  val jwtService = new JwtGenerator
+  val jwtService = new JwtServiceImpl
   val bcryptService = new BCryptServiceImpl
 
   val logger = Logger(this.getClass)
@@ -36,7 +36,7 @@ class AppAction @Inject()(val parser: BodyParsers.Default)
                          (implicit val executionContext: ExecutionContext)
   extends ActionBuilder[UserRequest, AnyContent] {
 
-    val jwtService = new JwtGenerator
+    val jwtService = new JwtServiceImpl
 
     override def invokeBlock[A](request: Request[A], block: UserRequest[A] => Future[Result]): Future[Result] = {
     request.headers.get("Authorization")

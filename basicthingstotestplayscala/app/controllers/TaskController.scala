@@ -10,7 +10,7 @@ import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
 import models.{BadRequestException, ForbiddenException, TaskNotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
-import services.JwtGenerator
+import services.JwtServiceImpl
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 

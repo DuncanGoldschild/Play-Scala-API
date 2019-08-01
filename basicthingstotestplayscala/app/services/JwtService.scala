@@ -8,12 +8,12 @@ import pdi.jwt.{Jwt, JwtAlgorithm}
 
 import play.libs.Json
 
-trait JwtGeneratorServices {
+trait JwtService {
   def generateToken(u: String): String
   def getUsernameFromToken(token: String): Option[String]
 }
 
-class JwtGenerator extends JwtGeneratorServices {
+class JwtServiceImpl extends JwtService {
 
   val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
   val secret = ConfigFactory.load(conf).getString("play.crypto.secret")
