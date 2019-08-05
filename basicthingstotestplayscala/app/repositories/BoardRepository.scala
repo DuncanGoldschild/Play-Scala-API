@@ -6,8 +6,9 @@ import javax.inject._
 import play.api.mvc._
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.BSONObjectID
-import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException, TasksList}
+import reactivemongo.api.{Cursor, ReadPreference}
 
 class MongoBoardRepository @Inject() (
                                       components: ControllerComponents,
@@ -63,6 +64,19 @@ class MongoBoardRepository @Inject() (
         case Some(board) if isUsernameContainedInBoard(username, board) => Future.successful(Right(board))
         case None => Future.successful(Left(NotFoundException()))
         case _ => Future.successful(Left(ForbiddenException()))
+      }
+  }
+
+  def listAllLists(boardId : String, username: String): Future[Either[Exception, List[TasksList]]] = {
+    findOne(boardId)
+      .flatMap {
+        case Some(board: Board) if isUsernameContainedInBoard(username, board) =>
+          listAllListsFromBoardId(boardId)
+            .map {
+              Right(_)
+            }
+        case None => Future.successful(Left(NotFoundException("Board not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this board")))
       }
   }
 }

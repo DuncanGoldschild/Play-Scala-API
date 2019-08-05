@@ -41,7 +41,9 @@ class MemberController @Inject() (
         controllerUtils.badRequest,
         memberAuth => {
           memberRepository.auth(memberAuth).map {
-            case Some(token) => Ok(Json.toJson(token))
+            case Some(token) =>
+
+              Ok(Json.toJson(token))
             case None => BadRequest("Invalid username or password")
           }.recover(controllerUtils.logAndInternalServerError)
         }

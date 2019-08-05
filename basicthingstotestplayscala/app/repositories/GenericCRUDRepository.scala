@@ -40,7 +40,6 @@ trait GenericCRUDRepository [A] {
       .map(verifyUpdatedOneDocument)
   }
 
-
   def idSelector (id: String) = BSONDocument("id" -> id)
 
   def verifyUpdatedOneDocument(writeResult: WriteResult): Option[Unit] =
@@ -50,4 +49,10 @@ trait GenericCRUDRepository [A] {
 
   def isUsernameContainedInTasksList (username: String, tasksList: TasksList): Boolean = tasksList.membersUsername.contains(username)
 
+  def listAllListsFromBoardId(id: String): Future[List[TasksList]] = {
+    val cursor: Future[Cursor[TasksList]] = collection.map {
+      _.find(BSONDocument("boardId" -> id)).cursor[TasksList](ReadPreference.primary)
+    }
+    cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[TasksList]]()))
+  }
 }
