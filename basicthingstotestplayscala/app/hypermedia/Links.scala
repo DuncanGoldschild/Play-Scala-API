@@ -15,37 +15,17 @@ case class Links() {
     controls = link :: controls
   }
 
-  def addAsJsonTo(jsValue: JsValue): JsObject = {
-    jsValue.as[JsObject] ++ asJson
+  def addAsJsonTo(jsValue: JsValue, elementsName: String): JsObject = {
+    jsValue.as[JsObject] ++ Json.obj(elementsName -> asJson)
   }
 
-  def asJson: JsObject = {
-    Json.obj(
-      "@controls" -> Json.toJson(controls))
+  def asJson: JsValue = {
+    Json.toJson(controls)
   }
 
-  def addAsJsonTo[T](obj: T)(implicit objWrites: Writes[T]): JsObject = {
-    Json.toJson(obj).as[JsObject] ++ asJson
+  def addAsJsonTo[T](obj: T,  elementsName: String)(implicit objWrites: Writes[T]): JsObject = {
+    Json.toJson(obj).as[JsObject] ++ Json.obj(elementsName -> asJson)
   }
 
-}
-
-object Links {
-
-  def generateAsJson[T](obj: T, linkGenerator: T => Links)(implicit objWrites: Writes[T]): JsObject = {
-    Json.toJson(obj).as[JsObject] ++ linkGenerator(obj).asJson
-  }
-
-  def generateAsJson[T](list: Seq[T], linkGenerator: T => Links)(implicit objWrites: Writes[T]): JsObject = {
-    JsObject(Seq("collection" -> Json.toJson(list.map(generateAsJson(_, linkGenerator)))))
-  }
-
-  def generateAsJsonImplicit[T](obj: T)(implicit linkGenerator: T => Links, objWrites: Writes[T]): JsObject = {
-    Json.toJson(obj).as[JsObject] ++ linkGenerator(obj).asJson
-  }
-
-  def generateAsJsonImplicit[T](list: Seq[T])(implicit linkGenerator: T => Links, objWrites: Writes[T]): JsObject = {
-    JsObject(Seq("collection" -> Json.toJson(list.map(generateAsJson(_, linkGenerator)))))
-  }
 }
 
