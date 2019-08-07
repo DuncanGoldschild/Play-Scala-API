@@ -1,20 +1,18 @@
 package controllers
 
-
 import scala.concurrent._
+
 import javax.inject._
 
 import ExecutionContext.Implicits.global
 import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
-import hypermedia.BoardLink.linkTo
-import hypermedia.{Links}
+
 import repositories.{MongoBoardRepository, MongoMemberRepository, MongoTasksListRepository}
 import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
-import scala.util.Success
 
 
 @Singleton
@@ -33,11 +31,7 @@ class BoardController @Inject() (
     boardRepository.find(id, request.username)
       .flatMap {
         case Right(board) =>
-          val links = Links()
-          val links2 = Links()
-          links2.add(linkTo(routes.BoardController.findBoardById(id)).withSelfRel.withJsonMediaType)
-          links2.add(linkTo(routes.BoardController.deleteBoard(id)).withDeleteRel.withJsonMediaType)
-          addListsRoutesAndOk(id, links, links2, board)
+          addListsAndControlsRoutesAndOk(id, board)
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(controllerUtils.logAndInternalServerError)
@@ -48,13 +42,7 @@ class BoardController @Inject() (
     val username = request.username
     boardRepository.listAllFromUsername(username)
       .map {
-        listOfBoards =>
-          val links = Links()
-          val links2 = Links()
-          links2.add(linkTo(routes.BoardController.allUserBoards()).withSelfRel.withJsonMediaType.withDisplayFormat("MethodOnSelf"))
-          links2.add(linkTo(routes.BoardController.createNewBoard).withCreateRel.withJsonMediaType.withDisplayFormat("MethodOnSelf"))
-          for (board <- listOfBoards) links.add(linkTo(routes.BoardController.findBoardById(board.id)).withGetRel.withId(board.id).withLabel(board.label).withJsonMediaType.withDisplayFormat("GetOneElement"))
-          Ok(Json.toJson(links.addAsJsonTo(Json.obj("username" -> username, "@controls" -> links2.asJson), "boards")))
+        listOfBoards => addBoardsHypermediaAndOk(listOfBoards, username)
       }
   }
 
@@ -98,11 +86,35 @@ class BoardController @Inject() (
   }
 
   // Returns a list of all the lists contained in this board
-  private def addListsRoutesAndOk(id: String, links: Links, links2: Links, board: Board): Future[Result] =
+  private def addListsAndControlsRoutesAndOk(id: String, board: Board): Future[Result] =
     tasksListRepository.listAllListsFromBoardId(id)
       .map {
         listOfBoardLists =>
-          for (listTask <- listOfBoardLists) links.add(linkTo(routes.TasksListController.findListTaskById(listTask.id)).withGetRel.withJsonMediaType.withDisplayFormat("GetOneElement").withId(listTask.id).withLabel(listTask.label))
-          Ok(Json.toJson(links.addAsJsonTo(Json.obj("info" -> Json.toJson(board), "@controls" -> links2.asJson), "lists")))
+          val listSelfMethods: List[JsObject] =
+            createCRUDActionJsonLink("self", routes.BoardController.findBoardById(id).toString, "GET", "application/json") ::
+              createCRUDActionJsonLink("delete", routes.BoardController.deleteBoard(id).toString, "DELETE", "application/json") :: List()
+          var listTasksList: List[JsObject] = List()
+          for (tasksList <- listOfBoardLists)
+            listTasksList = controllerUtils.createIdAndLabelElementJsonLink(tasksList.id, tasksList.label, "get", routes.TasksListController.findListTaskById(tasksList.id).toString, "GET", "application/json") :: listTasksList
+          Ok(Json.obj("info" -> Json.toJson(board), "lists" -> listTasksList, "@controls" -> listSelfMethods))
       }
+
+  private def addBoardsHypermediaAndOk (listOfBoards: List[Board], username: String): Result = {
+    val listSelfMethods: List[JsObject] =
+      createCRUDActionJsonLink("self", routes.BoardController.allUserBoards().toString, "GET", "application/json") :: createCRUDActionJsonLink("create", routes.BoardController.createNewBoard.toString, "POST", "application/json") :: List()
+    var listBoards: List[JsObject] = List()
+    for (board <- listOfBoards)
+      listBoards = controllerUtils.createIdAndLabelElementJsonLink(board.id, board.label, "get", routes.BoardController.findBoardById(board.id).toString, "GET", "application/json") :: listBoards
+    Ok(Json.obj("username" -> username, "boards" -> listBoards, "@controls" -> listSelfMethods))
+  }
+
+  private def createCRUDActionJsonLink(name: String, uri: String, verb: String, mediaType: String) = {
+    Json.obj(
+      name -> Json.obj(
+        "href" -> uri,
+        "verb" -> verb,
+        "mediaType" -> mediaType
+      )
+    )
+  }
 }

@@ -27,6 +27,20 @@ class ControllerUtils @Inject() (
       logger.error(e.getMessage, e)
       InternalServerError
   }
+
+  def createIdAndLabelElementJsonLink(id: String, label: String, name: String, uri: String, verb: String, mediaType: String) = {
+    Json.obj(
+      "id" -> id,
+      "label" -> label,
+      "@controls" -> Json.obj(
+        name -> Json.obj(
+          "href" -> uri,
+          "verb" -> verb,
+          "mediaType" -> mediaType
+        )
+      )
+    )
+  }
 }
 
 
