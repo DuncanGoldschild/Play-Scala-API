@@ -41,6 +41,16 @@ class ControllerUtils @Inject() (
       )
     )
   }
+
+  def createCRUDActionJsonLink(name: String, uri: String, verb: String, mediaType: String) = {
+    Json.obj(
+      name -> Json.obj(
+        "href" -> uri,
+        "verb" -> verb,
+        "mediaType" -> mediaType
+      )
+    )
+  }
 }
 
 

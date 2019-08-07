@@ -91,8 +91,8 @@ class BoardController @Inject() (
       .map {
         listOfBoardLists =>
           val listSelfMethods: List[JsObject] =
-            createCRUDActionJsonLink("self", routes.BoardController.findBoardById(id).toString, "GET", "application/json") ::
-              createCRUDActionJsonLink("delete", routes.BoardController.deleteBoard(id).toString, "DELETE", "application/json") :: List()
+            controllerUtils.createCRUDActionJsonLink("self", routes.BoardController.findBoardById(id).toString, "GET", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("delete", routes.BoardController.deleteBoard(id).toString, "DELETE", "application/json") :: List()
           var listTasksList: List[JsObject] = List()
           for (tasksList <- listOfBoardLists)
             listTasksList = controllerUtils.createIdAndLabelElementJsonLink(tasksList.id, tasksList.label, "get", routes.TasksListController.findListTaskById(tasksList.id).toString, "GET", "application/json") :: listTasksList
@@ -101,20 +101,11 @@ class BoardController @Inject() (
 
   private def addBoardsHypermediaAndOk (listOfBoards: List[Board], username: String): Result = {
     val listSelfMethods: List[JsObject] =
-      createCRUDActionJsonLink("self", routes.BoardController.allUserBoards().toString, "GET", "application/json") :: createCRUDActionJsonLink("create", routes.BoardController.createNewBoard.toString, "POST", "application/json") :: List()
+      controllerUtils.createCRUDActionJsonLink("self", routes.BoardController.allUserBoards().toString, "GET", "application/json") :: controllerUtils.createCRUDActionJsonLink("create", routes.BoardController.createNewBoard.toString, "POST", "application/json") :: List()
     var listBoards: List[JsObject] = List()
     for (board <- listOfBoards)
       listBoards = controllerUtils.createIdAndLabelElementJsonLink(board.id, board.label, "get", routes.BoardController.findBoardById(board.id).toString, "GET", "application/json") :: listBoards
     Ok(Json.obj("username" -> username, "boards" -> listBoards, "@controls" -> listSelfMethods))
   }
 
-  private def createCRUDActionJsonLink(name: String, uri: String, verb: String, mediaType: String) = {
-    Json.obj(
-      name -> Json.obj(
-        "href" -> uri,
-        "verb" -> verb,
-        "mediaType" -> mediaType
-      )
-    )
-  }
 }
