@@ -1,16 +1,14 @@
 package controllers
 
 import scala.concurrent._
-
 import javax.inject._
 
 import ExecutionContext.Implicits.global
 import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
-
 import repositories.{MongoBoardRepository, MongoMemberRepository, MongoTasksListRepository}
-import models.{Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException}
+import models.{BadRequestException, Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, MemberAddOrDelete, NotFoundException}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -31,7 +29,7 @@ class BoardController @Inject() (
     boardRepository.find(id, request.username)
       .flatMap {
         case Right(board) =>
-          addListsAndControlsRoutesAndOk(id, board)
+          addListsAndControlsRoutesAndOk(board)
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(controllerUtils.logAndInternalServerError)
@@ -85,14 +83,50 @@ class BoardController @Inject() (
       )
   }
 
+  def addMemberToBoard (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[MemberAddOrDelete]
+      .fold(
+        controllerUtils.badRequest,
+        memberAdd => {
+          boardRepository.addMember(id, request.username, memberAdd.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              case Left(exception: BadRequestException) => BadRequest(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
+  def deleteMemberFromBoard (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[MemberAddOrDelete]
+      .fold(
+        controllerUtils.badRequest,
+        memberAdd => {
+          boardRepository.deleteMember(id, request.username, memberAdd.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              case Left(exception: BadRequestException) => BadRequest(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
   // Returns a list of all the lists contained in this board
-  private def addListsAndControlsRoutesAndOk(id: String, board: Board): Future[Result] =
-    tasksListRepository.listAllListsFromBoardId(id)
+  private def addListsAndControlsRoutesAndOk(board: Board): Future[Result] =
+    tasksListRepository.listAllListsFromBoardId(board.id)
       .map {
         listOfBoardLists =>
           val listSelfMethods: List[JsObject] =
-            controllerUtils.createCRUDActionJsonLink("self", routes.BoardController.findBoardById(id).toString, "GET", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("delete", routes.BoardController.deleteBoard(id).toString, "DELETE", "application/json") :: List()
+            controllerUtils.createCRUDActionJsonLink("self", routes.BoardController.findBoardById(board.id).toString, "GET", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("deleteBoard", routes.BoardController.deleteBoard(board.id).toString, "DELETE", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("changeLabel", routes.BoardController.updateBoard(board.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("addMemberToBoard", routes.BoardController.addMemberToBoard(board.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("deleteMemberFromBoard", routes.BoardController.deleteMemberFromBoard(board.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("createList", routes.TasksListController.createNewListTask.toString, "POST", "application/json") :: List()
           var listTasksList: List[JsObject] = List()
           for (tasksList <- listOfBoardLists)
             listTasksList = controllerUtils.createIdAndLabelElementJsonLink(tasksList.id, tasksList.label, "get", routes.TasksListController.findListTaskById(tasksList.id).toString, "GET", "application/json") :: listTasksList

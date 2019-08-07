@@ -1,15 +1,14 @@
 package controllers
 
 import scala.concurrent._
-
 import javax.inject._
 
 import ExecutionContext.Implicits.global
 import play.api.mvc.{Action, _}
 import play.api.libs.json._
 import com.google.inject.Singleton
-import repositories.MongoTasksListRepository
-import models.{BadRequestException, ForbiddenException, NotFoundException, TasksListCreationRequest, TasksListUpdateRequest}
+import repositories.{MongoTaskRepository, MongoTasksListRepository}
+import models.{BadRequestException, ForbiddenException, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -21,6 +20,7 @@ import utils.{AppAction, ControllerUtils, UserRequest}
 class TasksListController @Inject()(
                                      components: ControllerComponents,
                                      listTaskRepository: MongoTasksListRepository,
+                                     taskRepository: MongoTaskRepository,
                                      appAction: AppAction
                                 ) extends AbstractController(components) {
 
@@ -29,10 +29,11 @@ class TasksListController @Inject()(
   // Display the ListTask by its id with GET /list/{id}
   def findListTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
     listTaskRepository.find(id, request.username)
-      .map {
-        case Right(list) => Ok(Json.toJson(list))
-        case Left(_: NotFoundException) => NotFound
-        case Left(_: ForbiddenException) => Forbidden
+      .flatMap {
+        case Right(list) =>
+          addHypermediaToListAndOk(request.username, list)
+        case Left(_: NotFoundException) => Future.successful(NotFound)
+        case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(controllerUtils.logAndInternalServerError)
   }
 
@@ -83,4 +84,21 @@ class TasksListController @Inject()(
         }
       )
   }
+
+  // Returns a list of all the lists contained in this board
+  private def addHypermediaToListAndOk(username: String, list: TasksList): Future[Result] =
+    taskRepository.listAllFromUsername(username)
+      .map {
+        listOfBoardLists =>
+          val listSelfMethods: List[JsObject] =
+            controllerUtils.createCRUDActionJsonLink("self", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("deleteList", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("changeListLabel", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("createTask", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
+          var listTasksList: List[JsObject] = List()
+          for (task <- listOfBoardLists)
+            listTasksList = controllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
+          Ok(Json.obj("info" -> Json.toJson(list), "tasks" -> listTasksList, "@controls" -> listSelfMethods))
+      }
+
 }

@@ -96,3 +96,10 @@ object MemberUpdateRequest {
   implicit val memberUpdateRequestReads: Reads[MemberUpdateRequest] = Json.reads[MemberUpdateRequest]
 
 }
+
+case class MemberAddOrDelete (username: String)
+object MemberAddOrDelete {
+
+  implicit val memberAddOrDeleteReads: Reads[MemberAddOrDelete] = Json.reads[MemberAddOrDelete]
+
+}

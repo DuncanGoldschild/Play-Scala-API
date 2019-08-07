@@ -29,6 +29,8 @@ POST    /boards                     controllers.BoardController.createNewBoard
 GET     /board/:id                  controllers.BoardController.findBoardById(id : String)
 PUT     /board/:id                  controllers.BoardController.updateBoard(id : String)
 DELETE  /board/:id                  controllers.BoardController.deleteBoard(id : String)
+PUT     /board/:id/addMember        controllers.BoardController.addMemberToBoard(id: String)
+PUT     /board/:id/deleteMember     controllers.BoardController.deleteMemberFromBoard(id: String)
 
 #List Request
 GET     /lists                      controllers.TasksListController.allListTasks
