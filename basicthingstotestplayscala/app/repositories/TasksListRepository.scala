@@ -14,7 +14,8 @@ import reactivemongo.api.{Cursor, ReadPreference}
 class MongoTasksListRepository @Inject()(
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
-                                       boardRepository: MongoBoardRepository
+                                       boardRepository: MongoBoardRepository,
+                                       memberRepository: MongoMemberRepository
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -35,6 +36,40 @@ class MongoTasksListRepository @Inject()(
       .map (verifyUpdatedOneDocument)
   }
 
+  def addMember(id: String, username: String, addedMemberUsername: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          if (isUsernameContainedInTasksList(addedMemberUsername, tasksList)) Future.successful(Left(BadRequestException("User already has access to this tasksList")))
+          else memberRepository.findByUsername(addedMemberUsername).flatMap {
+            case Some(_) =>
+              addOneMemberToDocument(id, addedMemberUsername)
+                .map {
+                  _ => Right()
+                }
+            case None => Future.successful(Left(BadRequestException("User does not exist")))
+          }
+
+        case None => Future.successful(Left(NotFoundException("List not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this tasksList")))
+      }
+  }
+
+  def deleteMember(id: String, username: String, deletedMemberUsername: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          if (!isUsernameContainedInTasksList(deletedMemberUsername, tasksList)) Future.successful(Left(BadRequestException("User does not have access to this tasksList")))
+          else
+            deleteOneMemberFromDocument(id, deletedMemberUsername)
+              .map {
+                _ => Right()
+              }
+        case None => Future.successful(Left(NotFoundException("List not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this tasksList")))
+      }
+  }
+  
   def create(newListTask: TasksListCreationRequest, username: String): Future[Either[Exception, TasksList]] = {
     boardRepository.findOne(newListTask.boardId)
       .flatMap {

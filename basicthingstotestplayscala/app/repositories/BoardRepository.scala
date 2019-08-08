@@ -81,34 +81,6 @@ class MongoBoardRepository @Inject() (
       }
   }
 
-  def addOneMemberToBoard(id: String, addedUsername: String): Future[Option[Unit]] = {
-    collection.flatMap(_.findAndUpdate(
-      idSelector(id),
-      BSONDocument("$addToSet" -> BSONDocument("membersUsername" -> addedUsername)),
-      fetchNewObject = true)
-      .map {
-        _.result[Board]
-          .map {
-            _ =>
-          }
-      }
-    )
-  }
-
-  def deleteOneMemberFromBoard(id: String, deletedUsername: String): Future[Option[Unit]] = {
-    collection.flatMap(_.findAndUpdate(
-      idSelector(id),
-      BSONDocument("$pull" -> BSONDocument("membersUsername" -> deletedUsername)),
-      fetchNewObject = true)
-      .map {
-        _.result[Board]
-          .map {
-            _ =>
-          }
-      }
-    )
-  }
-
   def addMember(id: String, username: String, addedMemberUsername: String): Future[Either[Exception, Unit]] = {
     findOne(id)
       .flatMap {
@@ -116,7 +88,7 @@ class MongoBoardRepository @Inject() (
           if (isUsernameContainedInBoard(addedMemberUsername, board)) Future.successful(Left(BadRequestException("User already has access to this board")))
           else memberRepository.findByUsername(addedMemberUsername).flatMap {
             case Some(_) =>
-              addOneMemberToBoard(id, addedMemberUsername)
+              addOneMemberToDocument(id, addedMemberUsername)
                 .map {
                   _ => Right()
                 }
@@ -134,7 +106,7 @@ class MongoBoardRepository @Inject() (
         case Some(board) if isUsernameContainedInBoard(username, board) =>
           if (!isUsernameContainedInBoard(deletedMemberUsername, board)) Future.successful(Left(BadRequestException("User does not have access to this board")))
           else
-            deleteOneMemberFromBoard(id, deletedMemberUsername)
+            deleteOneMemberFromDocument(id, deletedMemberUsername)
               .map {
                 _ => Right()
               }

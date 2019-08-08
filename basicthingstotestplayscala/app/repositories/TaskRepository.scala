@@ -14,7 +14,8 @@ import models.{BadRequestException, ForbiddenException, TaskNotArchivedException
 class MongoTaskRepository @Inject() (
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
-                                       tasksListRepository: MongoTasksListRepository
+                                       tasksListRepository: MongoTasksListRepository,
+                                       memberRepository: MongoMemberRepository
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -27,7 +28,6 @@ class MongoTaskRepository @Inject() (
     val insertedTask = Task(BSONObjectID.generate().stringify, newTask.label, newTask.description, newTask.archived, newTask.listId, Seq(username))
     collection.flatMap(_.insert.one(insertedTask)).map { _ => insertedTask }
   }
-
 
   def updateOne (id: String, newTask: TaskUpdateRequest): Future[Option[Unit]] = {
     val updatedTask = Task(id, newTask.label, newTask.description, newTask.archived, newTask.listId, newTask.membersUsername)
@@ -51,6 +51,40 @@ class MongoTaskRepository @Inject() (
           }
       }
     )
+  }
+
+  def addMember(id: String, username: String, addedMemberUsername: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+          if (isUsernameContainedInTask(addedMemberUsername, task)) Future.successful(Left(BadRequestException("User already has access to this task")))
+          else memberRepository.findByUsername(addedMemberUsername).flatMap {
+            case Some(_) =>
+              addOneMemberToDocument(id, addedMemberUsername)
+                .map {
+                  _ => Right()
+                }
+            case None => Future.successful(Left(BadRequestException("User does not exist")))
+          }
+
+        case None => Future.successful(Left(NotFoundException("Task not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this task")))
+      }
+  }
+
+  def deleteMember(id: String, username: String, deletedMemberUsername: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+          if (!isUsernameContainedInTask(deletedMemberUsername, task)) Future.successful(Left(BadRequestException("User does not have access to this task")))
+          else
+            deleteOneMemberFromDocument(id, deletedMemberUsername)
+              .map {
+                _ => Right()
+              }
+        case None => Future.successful(Left(NotFoundException("Task not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this task")))
+      }
   }
 
   def archive(id: String, username: String, archiveOrRestore: Boolean): Future[Either[Exception, Unit]] = {

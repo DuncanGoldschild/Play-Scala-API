@@ -38,6 +38,8 @@ POST    /lists                      controllers.TasksListController.createNewLis
 GET     /list/:id                   controllers.TasksListController.findListTaskById(id : String)
 PUT     /list/:id                   controllers.TasksListController.updateListTask(id : String)
 DELETE  /list/:id                   controllers.TasksListController.deleteListTask(id : String)
+PUT     /list/:id/addMember         controllers.TasksListController.addMemberToList(id: String)
+PUT     /list/:id/deleteMember      controllers.TasksListController.deleteMemberFromList(id: String)
 
 #Task Request
 GET     /tasks                      controllers.TaskController.allTasks
@@ -46,6 +48,8 @@ GET     /task/:id                   controllers.TaskController.findTaskById(id :
 PUT     /task/:id                   controllers.TaskController.updateTask(id : String)
 PUT     /task/:id/archive/:bool     controllers.TaskController.archiveTask(id : String, bool : Boolean)
 DELETE  /task/:id                   controllers.TaskController.deleteTask(id : String)
+PUT     /task/:id/addMember         controllers.TaskController.addMemberToTask(id: String)
+PUT     /task/:id/deleteMember      controllers.TaskController.deleteMemberFromTask(id: String)
 
 #Member Request
 GET     /members                    controllers.MemberController.allMembers

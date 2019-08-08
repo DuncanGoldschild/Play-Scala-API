@@ -8,7 +8,7 @@ import play.api.mvc.{Action, _}
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.{MongoTaskRepository, MongoTasksListRepository}
-import models.{BadRequestException, ForbiddenException, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
+import models.{BadRequestException, ForbiddenException, MemberAddOrDelete, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -80,6 +80,38 @@ class TasksListController @Inject()(
               case Right(_) => NoContent
               case Left(_: NotFoundException) => NotFound
               case Left(_: ForbiddenException) => Forbidden
+            }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
+  def addMemberToList (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[MemberAddOrDelete]
+      .fold(
+        controllerUtils.badRequest,
+        memberAdd => {
+          listTaskRepository.addMember(id, request.username, memberAdd.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              case Left(exception: BadRequestException) => BadRequest(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
+  def deleteMemberFromList (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[MemberAddOrDelete]
+      .fold(
+        controllerUtils.badRequest,
+        memberAdd => {
+          listTaskRepository.deleteMember(id, request.username, memberAdd.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              case Left(exception: BadRequestException) => BadRequest(exception.message)
             }.recover(controllerUtils.logAndInternalServerError)
         }
       )

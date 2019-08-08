@@ -9,7 +9,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
-import models.{BadRequestException, ForbiddenException, TaskNotArchivedException, NotFoundException, TaskCreationRequest, TaskUpdateRequest}
+import models.{BadRequestException, ForbiddenException, MemberAddOrDelete, NotFoundException, TaskCreationRequest, TaskNotArchivedException, TaskUpdateRequest}
 import services.JwtServiceImpl
 import utils.{AppAction, ControllerUtils, UserRequest}
 
@@ -70,6 +70,39 @@ class TaskController @Inject() (
       }
     )
   }
+
+  def addMemberToTask (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[MemberAddOrDelete]
+      .fold(
+        controllerUtils.badRequest,
+        memberAdd => {
+          taskRepository.addMember(id, request.username, memberAdd.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              case Left(exception: BadRequestException) => BadRequest(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
+  def deleteMemberFromTask (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[MemberAddOrDelete]
+      .fold(
+        controllerUtils.badRequest,
+        memberAdd => {
+          taskRepository.deleteMember(id, request.username, memberAdd.username)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              case Left(exception: BadRequestException) => BadRequest(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
   //Archive with PUT /task/{id}/archive
   def archiveTask(id: String, archiveOrRestore: Boolean): Action[JsValue] = appAction.async(parse.json) { request =>
         taskRepository.archive(id, request.username, archiveOrRestore)

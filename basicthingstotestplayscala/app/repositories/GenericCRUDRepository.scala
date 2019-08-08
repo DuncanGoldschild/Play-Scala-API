@@ -55,4 +55,32 @@ trait GenericCRUDRepository [A] {
     }
     cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[TasksList]]()))
   }
+
+  def addOneMemberToDocument(id: String, addedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      idSelector(id),
+      BSONDocument("$addToSet" -> BSONDocument("membersUsername" -> addedUsername)),
+      fetchNewObject = true)
+      .map {
+        _.result[A]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
+
+  def deleteOneMemberFromDocument(id: String, deletedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      idSelector(id),
+      BSONDocument("$pull" -> BSONDocument("membersUsername" -> deletedUsername)),
+      fetchNewObject = true)
+      .map {
+        _.result[A]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
 }
