@@ -53,8 +53,19 @@ class MongoBoardRepository @Inject() (
       .flatMap {
         case Some(board) if isUsernameContainedInBoard(username, board) =>
           deleteOne(boardId)
-            .map {
-              case Some(_) => Right()
+            .flatMap {
+              case Some(_) =>
+                tasksListRepository.listAllListsFromBoardId(boardId)
+                  .flatMap {
+                    listOfLists =>
+                      tasksListRepository.deleteAllDocumentSelected(BSONDocument("boardId" -> boardId))
+                        .map {
+                          _ =>
+                            for (list <- listOfLists)
+                              taskRepository.deleteAllDocumentSelected(BSONDocument("listId" -> list.id))
+                            Right()
+                        }
+                  }
             }
         case None => Future.successful(Left(NotFoundException()))
         case _ => Future.successful(Left(ForbiddenException()))

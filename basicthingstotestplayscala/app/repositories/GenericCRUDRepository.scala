@@ -1,6 +1,6 @@
 package repositories
 
-import models.{Board, TasksList}
+import models.{Board, Task, TasksList}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -56,6 +56,13 @@ trait GenericCRUDRepository [A] {
     cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[TasksList]]()))
   }
 
+  def listAllTasksFromListId(id: String): Future[List[Task]] = {
+    val cursor: Future[Cursor[Task]] = collection.map {
+      _.find(BSONDocument("listId" -> id)).cursor[Task](ReadPreference.primary)
+    }
+    cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[Task]]()))
+  }
+
   def addOneMemberToDocument(id: String, addedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
     collection.flatMap(_.findAndUpdate(
       idSelector(id),
@@ -96,5 +103,10 @@ trait GenericCRUDRepository [A] {
           }
       }
     )
+  }
+
+  def deleteAllDocumentSelected(selector: BSONDocument)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.delete.one(selector))
+      .map(verifyUpdatedOneDocument)
   }
 }

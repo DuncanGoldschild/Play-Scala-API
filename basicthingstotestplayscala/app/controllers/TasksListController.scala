@@ -119,16 +119,16 @@ class TasksListController @Inject()(
 
   // Returns a list of all the lists contained in this board
   private def addHypermediaToListAndOk(username: String, list: TasksList): Future[Result] =
-    taskRepository.listAllFromUsername(username)
+    taskRepository.listAllTasksFromListId(list.id)
       .map {
-        listOfBoardLists =>
+        listOfTasks =>
           val listSelfMethods: List[JsObject] =
             controllerUtils.createCRUDActionJsonLink("self", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("deleteList", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("changeListLabel", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("createTask", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
           var listTasksList: List[JsObject] = List()
-          for (task <- listOfBoardLists)
+          for (task <- listOfTasks)
             listTasksList = controllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
           Ok(Json.obj("info" -> Json.toJson(list), "tasks" -> listTasksList, "@controls" -> listSelfMethods))
       }
