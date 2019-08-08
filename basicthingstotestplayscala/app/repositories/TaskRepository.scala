@@ -14,6 +14,7 @@ import models.{BadRequestException, ForbiddenException, TaskNotArchivedException
 class MongoTaskRepository @Inject() (
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
+                                       boardRepository: MongoBoardRepository,
                                        tasksListRepository: MongoTasksListRepository,
                                        memberRepository: MongoMemberRepository
                                      ) extends AbstractController(components)
@@ -29,22 +30,22 @@ class MongoTaskRepository @Inject() (
     collection.flatMap(_.insert.one(insertedTask)).map { _ => insertedTask }
   }
 
-  def updateOne (id: String, newTask: TaskUpdateRequest): Future[Option[Unit]] = {
+  def updateOne(id: String, newTask: TaskUpdateRequest): Future[Option[Unit]] = {
     val updatedTask = Task(id, newTask.label, newTask.description, newTask.archived, newTask.listId, newTask.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedTask, upsert = false, multi = false))
-      .map (verifyUpdatedOneDocument)
+      .map(verifyUpdatedOneDocument)
   }
 
   def findOne(id: String): Future[Option[Task]] = {
     collection.flatMap(_.find(idSelector(id)).one[Task])
   }
 
-  def archiveOne (id: String, archiveOrRestore: Boolean): Future[Option[Unit]]  = {
+  def archiveOne(id: String, archiveOrRestore: Boolean): Future[Option[Unit]] = {
     collection.flatMap(_.findAndUpdate(
       idSelector(id),
       BSONDocument("$set" -> BSONDocument("archived" -> archiveOrRestore)),
       fetchNewObject = true)
-      .map{
+      .map {
         _.result[Task]
           .map {
             _ =>
@@ -61,8 +62,19 @@ class MongoTaskRepository @Inject() (
           else memberRepository.findByUsername(addedMemberUsername).flatMap {
             case Some(_) =>
               addOneMemberToDocument(id, addedMemberUsername)
-                .map {
-                  _ => Right()
+                .flatMap {
+                  _ =>
+                    tasksListRepository.addOneMemberToDocument(task.listId, addedMemberUsername)
+                      .flatMap {
+                        _ =>
+                          tasksListRepository.findOne(task.listId)
+                            .map {
+                              optTaskList => boardRepository.addOneMemberToDocument(optTaskList.get.boardId, addedMemberUsername)
+                            }
+                      }
+                      .map {
+                        _ => Right()
+                      }
                 }
             case None => Future.successful(Left(BadRequestException("User does not exist")))
           }
@@ -79,9 +91,9 @@ class MongoTaskRepository @Inject() (
           if (!isUsernameContainedInTask(deletedMemberUsername, task)) Future.successful(Left(BadRequestException("User does not have access to this task")))
           else
             deleteOneMemberFromDocument(id, deletedMemberUsername)
-              .map {
-                _ => Right()
-              }
+                    .map {
+                      _ => Right()
+                    }
         case None => Future.successful(Left(NotFoundException("Task not found")))
         case _ => Future.successful(Left(ForbiddenException("You don't have access to this task")))
       }
@@ -91,10 +103,10 @@ class MongoTaskRepository @Inject() (
     findOne(id)
       .flatMap {
         case Some(task) if isUsernameContainedInTask(username, task) =>
-              archiveOne(id, archiveOrRestore)
-                .map {
-                  _ => Right()
-                }
+          archiveOne(id, archiveOrRestore)
+            .map {
+              _ => Right()
+            }
         case None => Future.successful(Left(NotFoundException("Task not found")))
         case _ => Future.successful(Left(ForbiddenException("You don't have access to this Task")))
       }
@@ -113,7 +125,7 @@ class MongoTaskRepository @Inject() (
       }
   }
 
-  def delete (taskId: String, username: String): Future[Either[Exception, Unit]] = {
+  def delete(taskId: String, username: String): Future[Either[Exception, Unit]] = {
     findOne(taskId)
       .flatMap {
         case Some(task) if isUsernameContainedInTask(username, task) =>
@@ -128,7 +140,7 @@ class MongoTaskRepository @Inject() (
       }
   }
 
-  def find (taskId: String, username: String): Future[Either[Exception, Task]] = {
+  def find(taskId: String, username: String): Future[Either[Exception, Task]] = {
     findOne(taskId)
       .flatMap {
         case Some(task) if isUsernameContainedInTask(username, task) => Future.successful(Right(task))
@@ -137,7 +149,7 @@ class MongoTaskRepository @Inject() (
       }
   }
 
-  def update (taskUpdateRequestId: String, taskUpdateRequest: TaskUpdateRequest, username: String): Future[Either[Exception, Unit]] = {
+  def update(taskUpdateRequestId: String, taskUpdateRequest: TaskUpdateRequest, username: String): Future[Either[Exception, Unit]] = {
     tasksListRepository.findOne(taskUpdateRequest.listId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
@@ -155,6 +167,6 @@ class MongoTaskRepository @Inject() (
         case _ => Future.successful(Left(ForbiddenException("You don't have access to this List")))
       }
   }
-  private def isUsernameContainedInTask (username: String, task: Task): Boolean = task.membersUsername.contains(username)
 
+  private def isUsernameContainedInTask(username: String, task: Task): Boolean = task.membersUsername.contains(username)
 }

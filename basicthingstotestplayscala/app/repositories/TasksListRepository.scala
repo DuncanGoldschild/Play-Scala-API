@@ -8,7 +8,6 @@ import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMo
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import models.{BadRequestException, ForbiddenException, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
-import reactivemongo.api.{Cursor, ReadPreference}
 
 
 class MongoTasksListRepository @Inject()(
@@ -20,6 +19,8 @@ class MongoTasksListRepository @Inject()(
   with MongoController
   with ReactiveMongoComponents
   with GenericCRUDRepository [TasksList] {
+
+  private val taskRepository: MongoTaskRepository = new MongoTaskRepository(components, reactiveMongoApi, boardRepository, this, memberRepository)
 
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("listTask"))
@@ -44,8 +45,11 @@ class MongoTasksListRepository @Inject()(
           else memberRepository.findByUsername(addedMemberUsername).flatMap {
             case Some(_) =>
               addOneMemberToDocument(id, addedMemberUsername)
-                .map {
-                  _ => Right()
+                .flatMap {
+                  _ => boardRepository.addOneMemberToDocument(tasksList.boardId, addedMemberUsername)
+                    .map {
+                      _ => Right()
+                    }
                 }
             case None => Future.successful(Left(BadRequestException("User does not exist")))
           }
@@ -62,9 +66,13 @@ class MongoTasksListRepository @Inject()(
           if (!isUsernameContainedInTasksList(deletedMemberUsername, tasksList)) Future.successful(Left(BadRequestException("User does not have access to this tasksList")))
           else
             deleteOneMemberFromDocument(id, deletedMemberUsername)
-              .map {
-                _ => Right()
-              }
+            .flatMap {
+              _ =>
+                taskRepository.deleteOneMemberFromAllDocumentSelected(BSONDocument("listId" -> id), deletedMemberUsername)
+                  .map {
+                    _ => Right()
+                  }
+            }
         case None => Future.successful(Left(NotFoundException("List not found")))
         case _ => Future.successful(Left(ForbiddenException("You don't have access to this tasksList")))
       }

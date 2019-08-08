@@ -116,7 +116,7 @@ class BoardController @Inject() (
   }
 
   // Returns a list of all the lists contained in this board
-  private def addListsAndControlsRoutesAndOk(board: Board): Future[Result] = // TODO : add/delete mmeber from task/list et hypermedia task et tous les updtaes de task
+  private def addListsAndControlsRoutesAndOk(board: Board): Future[Result] =
     tasksListRepository.listAllListsFromBoardId(board.id)
       .map {
         listOfBoardLists =>

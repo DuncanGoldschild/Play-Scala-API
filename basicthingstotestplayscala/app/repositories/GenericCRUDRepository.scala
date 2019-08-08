@@ -83,4 +83,18 @@ trait GenericCRUDRepository [A] {
       }
     )
   }
+
+  def deleteOneMemberFromAllDocumentSelected(selector: BSONDocument, deletedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      selector,
+      BSONDocument("$pull" -> BSONDocument("membersUsername" -> deletedUsername)),
+      fetchNewObject = true)
+      .map {
+        _.result[A]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
 }

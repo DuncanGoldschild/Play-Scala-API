@@ -8,7 +8,6 @@ import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMo
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import models.{BadRequestException, Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, NotFoundException, TasksList}
-import reactivemongo.api.{Cursor, ReadPreference}
 
 class MongoBoardRepository @Inject() (
                                       components: ControllerComponents,
@@ -18,6 +17,9 @@ class MongoBoardRepository @Inject() (
   with MongoController
   with ReactiveMongoComponents
   with GenericCRUDRepository[Board] {
+
+  private val tasksListRepository: MongoTasksListRepository = new MongoTasksListRepository(components, reactiveMongoApi, this, memberRepository)
+  private val taskRepository: MongoTaskRepository = new MongoTaskRepository(components, reactiveMongoApi, this, tasksListRepository, memberRepository)
 
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("board"))
@@ -107,8 +109,21 @@ class MongoBoardRepository @Inject() (
           if (!isUsernameContainedInBoard(deletedMemberUsername, board)) Future.successful(Left(BadRequestException("User does not have access to this board")))
           else
             deleteOneMemberFromDocument(id, deletedMemberUsername)
-              .map {
-                _ => Right()
+              .flatMap {
+                _ =>
+                  tasksListRepository.deleteOneMemberFromAllDocumentSelected(BSONDocument("boardId" -> id), deletedMemberUsername)
+                      .flatMap{
+                        _ => tasksListRepository.listAllListsFromBoardId(id)
+                          .map{
+                            listOfLists =>
+                              for (list <- listOfLists)
+                                taskRepository.deleteOneMemberFromAllDocumentSelected(BSONDocument("listId" -> list.id), deletedMemberUsername)
+                          }
+                          .map {
+                            _ => Right()
+                          }
+
+                      }
               }
         case None => Future.successful(Left(NotFoundException("Board not found")))
         case _ => Future.successful(Left(ForbiddenException("You don't have access to this board")))
