@@ -109,8 +109,11 @@ class MongoTasksListRepository @Inject()(
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
           deleteOne(tasksListId)
-            .map {
-              case Some (_) => Right()
+            .flatMap {
+              case Some(_) => taskRepository.deleteAllDocumentSelected(BSONDocument("listId" -> tasksListId))
+                .map {
+                  _ => Right()
+                }
             }
         case None => Future.successful(Left(NotFoundException()))
         case _ => Future.successful(Left(ForbiddenException()))
