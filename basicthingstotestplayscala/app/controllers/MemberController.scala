@@ -8,7 +8,7 @@ import ExecutionContext.Implicits.global
 import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
-import repositories.{MongoBoardRepository, MongoMemberRepository}
+import repositories.{MongoMemberRepository}
 import models.{ForbiddenException, Member, MemberUpdateRequest, NotFoundException}
 import utils.{AppAction, ControllerUtils}
 

@@ -1,6 +1,5 @@
 package controllers
 
-
 import scala.concurrent._
 import javax.inject._
 
@@ -9,8 +8,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
-import models.{BadRequestException, ForbiddenException, MemberAddOrDelete, NotFoundException, TaskCreationRequest, TaskNotArchivedException, TaskUpdateRequest}
-import services.JwtServiceImpl
+import models.{BadRequestException, DescriptionUpdateRequest, ForbiddenException, LabelUpdateRequest, ListIdOfTaskUpdateRequest, MemberAddOrDelete, NotFoundException, Task, TaskCreationRequest, TaskNotArchivedException, TaskUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -31,7 +29,8 @@ class TaskController @Inject() (
   def findTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     taskRepository.find(id, request.username)
       .map {
-        case Right(task) => Ok(Json.toJson(task))
+        case Right(task) =>
+          addHypermediaToTaskAndOk(request.username, task)
         case Left(_: NotFoundException) => NotFound
         case Left(_: ForbiddenException) => Forbidden
       }.recover(controllerUtils.logAndInternalServerError)
@@ -60,18 +59,18 @@ class TaskController @Inject() (
   def createNewTask: Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskCreationRequest]
     taskResult.fold(
-        controllerUtils.badRequest,
+      controllerUtils.badRequest,
       newTask => {
         taskRepository.create(newTask, request.username).map {
-          case Right (createdTasksList) => Created(Json.toJson(createdTasksList))
-          case Left (_: ForbiddenException) => Forbidden("You don't have access to this List")
-          case Left (_: BadRequestException) => BadRequest("List does not exist")
+          case Right(createdTasksList) => Created(Json.toJson(createdTasksList))
+          case Left(_: ForbiddenException) => Forbidden("You don't have access to this List")
+          case Left(_: BadRequestException) => BadRequest("List does not exist")
         }.recover(controllerUtils.logAndInternalServerError)
       }
     )
   }
 
-  def addMemberToTask (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+  def addMemberToTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[MemberAddOrDelete]
       .fold(
         controllerUtils.badRequest,
@@ -87,7 +86,7 @@ class TaskController @Inject() (
       )
   }
 
-  def deleteMemberFromTask (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+  def deleteMemberFromTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[MemberAddOrDelete]
       .fold(
         controllerUtils.badRequest,
@@ -105,19 +104,61 @@ class TaskController @Inject() (
 
   //Archive with PUT /task/{id}/archive
   def archiveTask(id: String, archiveOrRestore: Boolean): Action[JsValue] = appAction.async(parse.json) { request =>
-        taskRepository.archive(id, request.username, archiveOrRestore)
-          .map {
-            case Right(_) => NoContent
-            case Left(exception: NotFoundException) => NotFound(exception.message)
-            case Left(exception: ForbiddenException) => Forbidden(exception.message)
-          }.recover(controllerUtils.logAndInternalServerError)
-      }
+    taskRepository.archive(id, request.username, archiveOrRestore)
+      .map {
+        case Right(_) => NoContent
+        case Left(exception: NotFoundException) => NotFound(exception.message)
+        case Left(exception: ForbiddenException) => Forbidden(exception.message)
+      }.recover(controllerUtils.logAndInternalServerError)
+  }
+
+  def changeParentListOfTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[ListIdOfTaskUpdateRequest]
+      .fold(
+        controllerUtils.badRequest,
+        listIdUpdateRequest =>
+          taskRepository.changeList(id, request.username, listIdUpdateRequest.listId)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+      )
+  }
+
+  def changeLabelOfTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[LabelUpdateRequest]
+      .fold(
+        controllerUtils.badRequest,
+        newLabelRequest =>
+          taskRepository.changeLabel(id, request.username, newLabelRequest.label)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+      )
+  }
+
+  def changeDescriptionOfTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[DescriptionUpdateRequest]
+      .fold(
+        controllerUtils.badRequest,
+        newDescriptionRequest =>
+          taskRepository.changeDescription(id, request.username, newDescriptionRequest.description)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+            }.recover(controllerUtils.logAndInternalServerError)
+      )
+  }
 
   // Update with PUT /task/{id}
   def updateTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     val taskResult = request.body.validate[TaskUpdateRequest]
     taskResult.fold(
-        controllerUtils.badRequest,
+      controllerUtils.badRequest,
       taskUpdateRequest => {
         taskRepository.update(id, taskUpdateRequest, request.username)
           .map {
@@ -128,5 +169,20 @@ class TaskController @Inject() (
           }.recover(controllerUtils.logAndInternalServerError)
       }
     )
+  }
+
+  private def addHypermediaToTaskAndOk(username: String, task: Task): Result = {
+    val listSelfMethods: List[JsObject] =
+      controllerUtils.createCRUDActionJsonLink("self", routes.TaskController.findTaskById(task.id).toString, "GET", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("deleteTask", routes.TaskController.deleteTask(task.id).toString, "DELETE", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("updateTask", routes.TaskController.updateTask(task.id).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("archiveTask", routes.TaskController.archiveTask(task.id, true).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("restoreTask", routes.TaskController.archiveTask(task.id, false).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("changeList", routes.TaskController.changeParentListOfTask(task.id).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("changeLabel", routes.TaskController.changeLabelOfTask(task.id).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("changeDescription", routes.TaskController.changeDescriptionOfTask(task.id).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("addMemberToTask", routes.TaskController.addMemberToTask(task.id).toString, "PUT", "application/json") ::
+        controllerUtils.createCRUDActionJsonLink("deleteMemberFromTask", routes.TaskController.deleteMemberFromTask(task.id).toString, "PUT", "application/json") :: List()
+    Ok(Json.obj("info" -> Json.toJson(task), "@controls" -> listSelfMethods))
   }
 }

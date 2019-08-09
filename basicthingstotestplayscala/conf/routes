@@ -50,6 +50,10 @@ PUT     /task/:id/archive/:bool     controllers.TaskController.archiveTask(id : 
 DELETE  /task/:id                   controllers.TaskController.deleteTask(id : String)
 PUT     /task/:id/addMember         controllers.TaskController.addMemberToTask(id: String)
 PUT     /task/:id/deleteMember      controllers.TaskController.deleteMemberFromTask(id: String)
+PUT     /task/:id/updateListId      controllers.TaskController.changeParentListOfTask(id: String)
+PUT     /task/:id/updateLabel       controllers.TaskController.changeLabelOfTask(id: String)
+PUT     /task/:id/updateDescription controllers.TaskController.changeDescriptionOfTask(id: String)
+
 
 #Member Request
 GET     /members                    controllers.MemberController.allMembers

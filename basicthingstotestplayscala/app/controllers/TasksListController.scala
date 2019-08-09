@@ -126,6 +126,8 @@ class TasksListController @Inject()(
             controllerUtils.createCRUDActionJsonLink("self", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("deleteList", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("changeListLabel", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("addMemberToList", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("deleteMemberFromList", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("createTask", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
           var listTasksList: List[JsObject] = List()
           for (task <- listOfTasks)

@@ -168,5 +168,50 @@ class MongoTaskRepository @Inject() (
       }
   }
 
+  def changeList(id: String, username: String, listId: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+          tasksListRepository.findOne(listId)
+              .flatMap {
+                case Some(list) if isUsernameContainedInTasksList(username, list)=>
+                updateField(idSelector(id), BSONDocument("listId" -> listId))
+                  .map {
+                    _ => Right()
+                  }
+                case None => Future.successful(Left(NotFoundException("List not found")))
+                case _ => Future.successful(Left(ForbiddenException("You don't have access to this List")))
+              }
+        case None => Future.successful(Left(NotFoundException("Task not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this Task")))
+      }
+  }
+
+  def changeLabel(id: String, username: String, newLabel: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+          updateField(idSelector(id), BSONDocument("label" -> newLabel))
+            .map {
+              _ => Right()
+            }
+        case None => Future.successful(Left(NotFoundException("Task not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this Task")))
+      }
+  }
+
+  def changeDescription(id: String, username: String, newDescription: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(task) if isUsernameContainedInTask(username, task) =>
+          updateField(idSelector(id), BSONDocument("description" -> newDescription))
+            .map {
+              _ => Right()
+            }
+        case None => Future.successful(Left(NotFoundException("Task not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this Task")))
+      }
+  }
+
   private def isUsernameContainedInTask(username: String, task: Task): Boolean = task.membersUsername.contains(username)
 }

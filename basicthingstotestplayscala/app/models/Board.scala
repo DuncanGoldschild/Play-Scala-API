@@ -79,6 +79,13 @@ object TaskUpdateRequest{
 
 }
 
+case class ListIdOfTaskUpdateRequest (listId: String)
+object ListIdOfTaskUpdateRequest{
+
+  implicit val listIdOfTaskUpdateRequestReads: Reads[ListIdOfTaskUpdateRequest] = Json.reads[ListIdOfTaskUpdateRequest]
+
+}
+
 case class Member (username: String, password: String)
 object Member {
 
@@ -101,5 +108,19 @@ case class MemberAddOrDelete (username: String)
 object MemberAddOrDelete {
 
   implicit val memberAddOrDeleteReads: Reads[MemberAddOrDelete] = Json.reads[MemberAddOrDelete]
+
+}
+
+case class LabelUpdateRequest (label: String)
+object LabelUpdateRequest {
+
+  implicit val labelUpdateReads: Reads[LabelUpdateRequest] = Json.reads[LabelUpdateRequest]
+
+}
+
+case class DescriptionUpdateRequest (description: String)
+object DescriptionUpdateRequest {
+
+  implicit val descriptionUpdateReads: Reads[DescriptionUpdateRequest] = Json.reads[DescriptionUpdateRequest]
 
 }
