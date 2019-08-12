@@ -1,12 +1,12 @@
-package utils
-
+package controllers
 
 import javax.inject.Inject
-import models.{BoardCreationRequest, BoardUpdateRequest, DescriptionUpdateRequest, LabelUpdateRequest, ListIdOfTaskUpdateRequest, MemberAddOrDelete, TaskCreationRequest, TasksListCreationRequest}
+import models._
+import play.api.libs.json._
+import play.api.mvc._
+import utils.AppAction
 
 import scala.concurrent._
-import play.api.mvc._
-import play.api.libs.json._
 
 
 class Schemas @Inject() (

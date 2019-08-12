@@ -14,7 +14,6 @@ import utils.ControllerUtils
 class MongoMemberRepository @Inject() (
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
-                                       controllerUtils: ControllerUtils
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
@@ -24,7 +23,7 @@ class MongoMemberRepository @Inject() (
     database.map(_.collection[BSONCollection]("member"))
 
   def createOne(newMember: Member): Future[Option[Member]] = {
-    val insertedMember = Member(newMember.username, controllerUtils.bcryptService.cryptPassword(newMember.password))
+    val insertedMember = Member(newMember.username, ControllerUtils.bcryptService.cryptPassword(newMember.password))
     findOne(newMember.username)
       .flatMap {
         case None => {
@@ -37,7 +36,7 @@ class MongoMemberRepository @Inject() (
   }
 
   def updateOne (username: String, newMember: MemberUpdateRequest): Future[Option[Unit]] = {
-    val updatedMember = Member(username, controllerUtils.bcryptService.cryptPassword(newMember.newPassword))
+    val updatedMember = Member(username, ControllerUtils.bcryptService.cryptPassword(newMember.newPassword))
     collection.flatMap(_.update.one(q = idSelector(username), u = updatedMember, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
@@ -53,7 +52,7 @@ class MongoMemberRepository @Inject() (
 
   def auth (memberAuth: Member): Future[Option[String]] = {
     findByUsername(memberAuth.username).map {
-      case Some(member) if controllerUtils.bcryptService.checkPassword(memberAuth.password, member.password) => Some(controllerUtils.jwtService.generateToken(member.username))
+      case Some(member) if ControllerUtils.bcryptService.checkPassword(memberAuth.password, member.password) => Some(ControllerUtils.jwtService.generateToken(member.username))
       case _ => None
     }
   }
@@ -61,7 +60,7 @@ class MongoMemberRepository @Inject() (
   def update (username: String, tokenUsername: String, memberUpdateRequest: MemberUpdateRequest): Future[Either[Exception, Unit]] = {
     findByUsername(username)
       .flatMap {
-        case Some(member) if checkUserPermissions(username, tokenUsername)&& controllerUtils.bcryptService.checkPassword(memberUpdateRequest.password, member.password) =>
+        case Some(member) if checkUserPermissions(username, tokenUsername)&& ControllerUtils.bcryptService.checkPassword(memberUpdateRequest.password, member.password) =>
           updateOne(username, memberUpdateRequest)
             .map {
               case Some (_) => Right()

@@ -10,22 +10,20 @@ import services.{BCryptServiceImpl, JwtServiceImpl}
 import scala.collection.Seq
 import scala.concurrent._
 
-class ControllerUtils @Inject() (
-                                  components: ControllerComponents
-                                ) extends AbstractController(components) {
+object ControllerUtils {
   val jwtService = new JwtServiceImpl
   val bcryptService = new BCryptServiceImpl
 
   val logger = Logger(this.getClass)
 
   def badRequest(errors: Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
-    Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+    Future.successful(Results.BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
   }
 
   def logAndInternalServerError: PartialFunction[Throwable, Result] = {
     case e: Throwable =>
       logger.error(e.getMessage, e)
-      InternalServerError
+      Results.Status(Status.INTERNAL_SERVER_ERROR)
   }
 
   def createIdAndLabelElementJsonLink(id: String, label: String, name: String, uri: String, verb: String, mediaType: String) = {

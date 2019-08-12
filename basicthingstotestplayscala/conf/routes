@@ -64,14 +64,14 @@ DELETE  /member/:username           controllers.MemberController.deleteMember(us
 POST    /members/auth               controllers.MemberController.authMember
 
 #Schemas
-GET     /schema/createBoard         utils.Schemas.createBoardSchema
-GET     /schema/updateBoard         utils.Schemas.updateBoardSchema
-GET     /schema/addDeleteMember     utils.Schemas.addDeleteMemberSchema
-GET     /schema/updateLabel         utils.Schemas.updateLabelSchema
-GET     /schema/updateDescription   utils.Schemas.descriptionUpdateSchema
-GET     /schema/createList          utils.Schemas.createListSchema
-GET     /schema/createTask          utils.Schemas.createTaskSchema
-GET     /schema/changeList          utils.Schemas.listIdOfTaskUpdateSchema
+GET     /schema/createBoard         controllers.Schemas.createBoardSchema
+GET     /schema/updateBoard         controllers.Schemas.updateBoardSchema
+GET     /schema/addDeleteMember     controllers.Schemas.addDeleteMemberSchema
+GET     /schema/updateLabel         controllers.Schemas.updateLabelSchema
+GET     /schema/updateDescription   controllers.Schemas.descriptionUpdateSchema
+GET     /schema/createList          controllers.Schemas.createListSchema
+GET     /schema/createTask          controllers.Schemas.createTaskSchema
+GET     /schema/changeList          controllers.Schemas.listIdOfTaskUpdateSchema
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

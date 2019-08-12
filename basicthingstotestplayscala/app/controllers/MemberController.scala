@@ -23,28 +23,26 @@ class MemberController @Inject() (
                                   appAction: AppAction
                                  ) extends AbstractController(components) {
 
-  val controllerUtils = new ControllerUtils(components)
-
   // Display the Member by its username with GET /member/{username}
   def findMemberById(username: String): Action[AnyContent] = appAction.async {
     memberRepository.findOne(username)
       .map {
         case Some(member) => Ok(Json.toJson(member))
         case None => NotFound
-      }.recover(controllerUtils.logAndInternalServerError)
+      }.recover(ControllerUtils.logAndInternalServerError)
   }
 
   def authMember: Action[JsValue] = Action.async(parse.json) { request =>
     val memberResult = request.body.validate[Member]
       memberResult.fold(
-        controllerUtils.badRequest,
+        ControllerUtils.badRequest,
         memberAuth => {
           memberRepository.auth(memberAuth).map {
             case Some(token) =>
               Ok(addHypermediaRoutesToToken(memberAuth.username, token))
             case None =>
-              BadRequest(Json.obj("@controls" -> controllerUtils.createCRUDActionJsonLink("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json")))
-          }.recover(controllerUtils.logAndInternalServerError)
+              BadRequest(Json.obj("@controls" -> ControllerUtils.createCRUDActionJsonLink("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json")))
+          }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
   }
@@ -53,7 +51,7 @@ class MemberController @Inject() (
   def allMembers: Action[AnyContent] = appAction.async {
     memberRepository.listAll.map {
       list => Ok(Json.toJson(list))
-    }.recover(controllerUtils.logAndInternalServerError)
+    }.recover(ControllerUtils.logAndInternalServerError)
   }
 
   // Delete with DELETE /member/{username}
@@ -63,19 +61,19 @@ class MemberController @Inject() (
         case Right(_) => NoContent
         case Left(_: NotFoundException) => NotFound
         case Left(_: ForbiddenException) => Forbidden
-      }.recover(controllerUtils.logAndInternalServerError)
+      }.recover(ControllerUtils.logAndInternalServerError)
   }
 
   // Add with POST /members
   def createNewMember: Action[JsValue] = Action.async(parse.json) { request =>
     request.body.validate[Member]
       .fold(
-        controllerUtils.badRequest,
+        ControllerUtils.badRequest,
         member => {
           memberRepository.createOne(member).map {
             case Some(createdMember) => Created(Json.toJson(createdMember))
             case None => BadRequest("Username already exists")
-          }.recover(controllerUtils.logAndInternalServerError)
+          }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
   }
@@ -84,14 +82,14 @@ class MemberController @Inject() (
   def updateMember(username: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[MemberUpdateRequest]
       .fold(
-        controllerUtils.badRequest,
+        ControllerUtils.badRequest,
         memberUpdateRequest => {
           memberRepository.update(username, request.username, memberUpdateRequest)
             .map {
               case Right(_) => NoContent
               case Left(_: NotFoundException) => NotFound
               case Left(_: ForbiddenException) => Forbidden
-            }.recover(controllerUtils.logAndInternalServerError)
+            }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
   }
@@ -99,11 +97,11 @@ class MemberController @Inject() (
   // Returns a JSON object with hypermedia links
   private def addHypermediaRoutesToToken(username: String, token: String): JsObject = {
     val listSelfMethods: List[JsObject] =
-      controllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.MemberController.findMemberById(username).toString, "GET", "application/json") ::
-        controllerUtils.createCRUDActionJsonLink("auth", "Authenticate a member", routes.MemberController.authMember.toString, "POST", "application/json") ::
-        controllerUtils.createCRUDActionJsonLink("changePassword", "Update your password", routes.MemberController.updateMember(username).toString, "PUT", "application/json") ::
-        controllerUtils.createCRUDActionJsonLink("delete", "Delete your account", routes.MemberController.deleteMember(username).toString, "DELETE", "application/json") ::
-        controllerUtils.createCRUDActionJsonLink("getBoards", "Get all your boards", routes.BoardController.allUserBoards.toString, "GET", "application/json") :: List()
+      ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.MemberController.findMemberById(username).toString, "GET", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("auth", "Authenticate a member", routes.MemberController.authMember.toString, "POST", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("changePassword", "Update your password", routes.MemberController.updateMember(username).toString, "PUT", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("delete", "Delete your account", routes.MemberController.deleteMember(username).toString, "DELETE", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("getBoards", "Get all your boards", routes.BoardController.allUserBoards.toString, "GET", "application/json") :: List()
     Json.obj("token" -> token, "username" -> username, "@controls" -> listSelfMethods)
   }
 }
