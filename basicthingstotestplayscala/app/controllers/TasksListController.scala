@@ -123,12 +123,12 @@ class TasksListController @Inject()(
       .map {
         listOfTasks =>
           val listSelfMethods: List[JsObject] =
-            controllerUtils.createCRUDActionJsonLink("self", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("deleteList", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("changeListLabel", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("addMemberToList", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("deleteMemberFromList", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("createTask", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
+            controllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("deleteList", "Delete this list", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("changeListLabel", "Update this list's label", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("addMemberToList", "Add a member to this list", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("deleteMemberFromList", "Delete a member from this list", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("createTask", "Create a new task in this list", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
           var listTasksList: List[JsObject] = List()
           for (task <- listOfTasks)
             listTasksList = controllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
