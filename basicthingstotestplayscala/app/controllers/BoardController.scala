@@ -123,7 +123,7 @@ class BoardController @Inject() (
           val listSelfMethods: List[JsObject] =
             controllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.BoardController.findBoardById(board.id).toString, "GET", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("deleteBoard", "Delete this board", routes.BoardController.deleteBoard(board.id).toString, "DELETE", "application/json") ::
-              controllerUtils.createCRUDActionJsonLink("changeLabel", "Update this board's label", routes.BoardController.updateBoard(board.id).toString, "PUT", "application/json") ::
+              controllerUtils.createCRUDActionJsonLink("updateLabel", "Update this board's label", routes.BoardController.updateBoard(board.id).toString, "PUT", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("addMemberToBoard", "Add a member to this board", routes.BoardController.addMemberToBoard(board.id).toString, "PUT", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("deleteMemberFromBoard", "Delete a member from this board", routes.BoardController.deleteMemberFromBoard(board.id).toString, "PUT", "application/json") ::
               controllerUtils.createCRUDActionJsonLink("createList", "Create a new list in this board", routes.TasksListController.createNewListTask.toString, "POST", "application/json") :: List()
