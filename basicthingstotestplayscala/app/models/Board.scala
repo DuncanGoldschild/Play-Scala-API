@@ -1,7 +1,6 @@
 package models
 
-import play.api.libs.json.{Json, Reads, Writes}
-
+import play.api.libs.json.{JsObject, Json, Reads, Writes}
 import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, Macros}
 
 case class Board (id: String, label: String, membersUsername: Seq[String])
@@ -20,6 +19,11 @@ object BoardCreationRequest{
 
   implicit val boardCreationRequestReads: Reads[BoardCreationRequest] = Json.reads[BoardCreationRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String"
+    )
+  }
 }
 
 case class BoardUpdateRequest (label: String, membersUsername: Seq[String])
@@ -27,6 +31,12 @@ object BoardUpdateRequest{
 
   implicit val boardCreationRequestReads: Reads[BoardUpdateRequest] = Json.reads[BoardUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "membersUsername" -> "Seq[String]"
+    )
+  }
 }
 
 case class TasksList(id: String, label: String, boardId: String, membersUsername: Seq[String])
@@ -109,6 +119,11 @@ object MemberAddOrDelete {
 
   implicit val memberAddOrDeleteReads: Reads[MemberAddOrDelete] = Json.reads[MemberAddOrDelete]
 
+  def schema: JsObject = {
+    Json.obj(
+      "username" -> "String"
+    )
+  }
 }
 
 case class LabelUpdateRequest (label: String)
