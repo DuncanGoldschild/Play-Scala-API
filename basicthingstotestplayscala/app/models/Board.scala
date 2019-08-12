@@ -55,6 +55,12 @@ object TasksListCreationRequest{
 
   implicit val listCreationRequestReads: Reads[TasksListCreationRequest] = Json.reads[TasksListCreationRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "boardId" -> "String"
+    )
+  }
 }
 
 case class TasksListUpdateRequest(label: String, membersUsername: Seq[String])
@@ -75,17 +81,25 @@ object Task {
 
 }
 
-case class TaskCreationRequest (label: String, description: String, archived: Boolean, listId: String)
+case class TaskCreationRequest (label: String, description: String, listId: String)
 object TaskCreationRequest{
 
   implicit val taskCreationRequestReads: Reads[TaskCreationRequest] = Json.reads[TaskCreationRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "description" -> "String",
+      "listId" -> "String"
+    )
+  }
 }
 
 case class TaskUpdateRequest (label: String, description: String, archived: Boolean, listId: String, membersUsername: Seq[String])
 object TaskUpdateRequest{
 
   implicit val listUpdateRequestReads: Reads[TaskUpdateRequest] = Json.reads[TaskUpdateRequest]
+
 
 }
 
@@ -94,6 +108,11 @@ object ListIdOfTaskUpdateRequest{
 
   implicit val listIdOfTaskUpdateRequestReads: Reads[ListIdOfTaskUpdateRequest] = Json.reads[ListIdOfTaskUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "listId" -> "String"
+    )
+  }
 }
 
 case class Member (username: String, password: String)
@@ -112,6 +131,12 @@ object MemberUpdateRequest {
 
   implicit val memberUpdateRequestReads: Reads[MemberUpdateRequest] = Json.reads[MemberUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "password" -> "String",
+      "newPassword" -> "String"
+    )
+  }
 }
 
 case class MemberAddOrDelete (username: String)
@@ -131,6 +156,11 @@ object LabelUpdateRequest {
 
   implicit val labelUpdateReads: Reads[LabelUpdateRequest] = Json.reads[LabelUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String"
+    )
+  }
 }
 
 case class DescriptionUpdateRequest (description: String)
@@ -138,4 +168,9 @@ object DescriptionUpdateRequest {
 
   implicit val descriptionUpdateReads: Reads[DescriptionUpdateRequest] = Json.reads[DescriptionUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "description" -> "String"
+    )
+  }
 }

@@ -65,6 +65,13 @@ POST    /members/auth               controllers.MemberController.authMember
 
 #Schemas
 GET     /schema/createBoard         utils.Schemas.createBoardSchema
+GET     /schema/createBoard         utils.Schemas.updateBoardSchema
+GET     /schema/createBoard         utils.Schemas.addDeleteMemberBoardSchema
+GET     /schema/createBoard         utils.Schemas.updateLabelSchema
+GET     /schema/createBoard         utils.Schemas.descriptionUpdateSchema
+GET     /schema/createBoard         utils.Schemas.createListSchema
+GET     /schema/createBoard         utils.Schemas.createTaskSchema
+GET     /schema/createBoard         utils.Schemas.listIdOfTaskUpdateSchema
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

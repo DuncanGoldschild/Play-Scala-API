@@ -26,7 +26,7 @@ class MongoTaskRepository @Inject() (
     database.map(_.collection[BSONCollection]("task"))
 
   def createOne(newTask: TaskCreationRequest, username: String): Future[Task] = {
-    val insertedTask = Task(BSONObjectID.generate().stringify, newTask.label, newTask.description, newTask.archived, newTask.listId, Seq(username))
+    val insertedTask = Task(BSONObjectID.generate().stringify, newTask.label, newTask.description, false, newTask.listId, Seq(username))
     collection.flatMap(_.insert.one(insertedTask)).map { _ => insertedTask }
   }
 
