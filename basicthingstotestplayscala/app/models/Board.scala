@@ -27,7 +27,7 @@ object BoardCreationRequest{
 }
 
 case class BoardUpdateRequest (label: String, membersUsername: Seq[String])
-object BoardUpdateRequest{
+object BoardUpdateRequest{ // todo: delete all full-update ?
 
   implicit val boardCreationRequestReads: Reads[BoardUpdateRequest] = Json.reads[BoardUpdateRequest]
 

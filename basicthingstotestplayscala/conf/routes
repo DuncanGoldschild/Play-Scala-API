@@ -65,13 +65,13 @@ POST    /members/auth               controllers.MemberController.authMember
 
 #Schemas
 GET     /schema/createBoard         utils.Schemas.createBoardSchema
-GET     /schema/createBoard         utils.Schemas.updateBoardSchema
-GET     /schema/createBoard         utils.Schemas.addDeleteMemberBoardSchema
-GET     /schema/createBoard         utils.Schemas.updateLabelSchema
-GET     /schema/createBoard         utils.Schemas.descriptionUpdateSchema
-GET     /schema/createBoard         utils.Schemas.createListSchema
-GET     /schema/createBoard         utils.Schemas.createTaskSchema
-GET     /schema/createBoard         utils.Schemas.listIdOfTaskUpdateSchema
+GET     /schema/updateBoard         utils.Schemas.updateBoardSchema
+GET     /schema/addDeleteMember     utils.Schemas.addDeleteMemberSchema
+GET     /schema/updateLabel         utils.Schemas.updateLabelSchema
+GET     /schema/updateDescription   utils.Schemas.descriptionUpdateSchema
+GET     /schema/createList          utils.Schemas.createListSchema
+GET     /schema/createTask          utils.Schemas.createTaskSchema
+GET     /schema/changeList          utils.Schemas.listIdOfTaskUpdateSchema
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

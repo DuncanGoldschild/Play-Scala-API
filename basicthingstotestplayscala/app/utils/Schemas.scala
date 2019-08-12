@@ -30,7 +30,7 @@ class Schemas @Inject() (
     Future.successful(Ok(BoardUpdateRequest.schema))
   }
 
-  def addDeleteMemberBoardSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def addDeleteMemberSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
     Future.successful(Ok(MemberAddOrDelete.schema))
   }
 
