@@ -8,7 +8,7 @@ import play.api.mvc.{Action, _}
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.{MongoTaskRepository, MongoTasksListRepository}
-import models.{BadRequestException, ForbiddenException, MemberAddOrDelete, NotFoundException, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
+import models.{BadRequestException, ForbiddenException, MemberAddOrDelete, NotFoundException, Task, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -29,7 +29,11 @@ class TasksListController @Inject()(
     listTaskRepository.find(id, request.username)
       .flatMap {
         case Right(list) =>
-          addHypermediaToListAndOk(request.username, list)
+          for {
+            tasks <- taskRepository.listAllTasksFromListId(id)
+            listWithControls <- generateHypermediaListSelfControls(list)
+            tasksControls <- generateHypermediaTasksControls(tasks)
+          } yield Ok(Json.obj("info" -> Json.toJson(list), "tasks" -> tasksControls, "@controls" -> listWithControls))
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)
@@ -115,22 +119,21 @@ class TasksListController @Inject()(
       )
   }
 
-  // Returns a list of all the lists contained in this board
-  private def addHypermediaToListAndOk(username: String, list: TasksList): Future[Result] =
-    taskRepository.listAllTasksFromListId(list.id)
-      .map {
-        listOfTasks =>
-          val listSelfMethods: List[JsObject] =
-            ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
-              ControllerUtils.createCRUDActionJsonLink("deleteList", "Delete this list", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
-              ControllerUtils.createCRUDActionJsonLink("updateListLabel", "Update this list's label", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
-              ControllerUtils.createCRUDActionJsonLink("addMemberToList", "Add a member to this list", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json") ::
-              ControllerUtils.createCRUDActionJsonLink("deleteMemberFromList", "Delete a member from this list", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json") ::
-              ControllerUtils.createCRUDActionJsonLink("createTask", "Create a new task in this list", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
-          var listTasksList: List[JsObject] = List()
-          for (task <- listOfTasks)
-            listTasksList = ControllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
-          Ok(Json.obj("info" -> Json.toJson(list), "tasks" -> listTasksList, "@controls" -> listSelfMethods))
-      }
+  private def generateHypermediaListSelfControls(list: TasksList): Future[List[JsObject]] = {
+    Future.successful(
+      ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("deleteList", "Delete this list", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("updateListLabel", "Update this list's label", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("addMemberToList", "Add a member to this list", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("deleteMemberFromList", "Delete a member from this list", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLink("createTask", "Create a new task in this list", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
+    )
+  }
 
+  private def generateHypermediaTasksControls(listOfTask: List[Task]): Future[List[JsObject]] = {
+    var listTasksList: List[JsObject] = List()
+    for (task <- listOfTask)
+      listTasksList = ControllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
+    Future.successful(listTasksList)
+  }
 }

@@ -3,7 +3,7 @@ package utils
 import javax.inject.Inject
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.{JsError, JsPath, Json, JsonValidationError}
+import play.api.libs.json.{JsError, JsObject, JsPath, JsValue, Json, JsonValidationError}
 import play.api.mvc._
 import services.{BCryptServiceImpl, JwtServiceImpl}
 
@@ -18,6 +18,10 @@ object ControllerUtils {
 
   def badRequest(errors: Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
     Future.successful(Results.BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+  }
+
+  def hypermediaStructureResponse(info: JsValue, listName: String, listObjects: List[JsObject], selfControls: List[JsObject] ) = {
+    Json.obj("info" -> info, listName -> listObjects, "@controls" -> selfControls)
   }
 
   def logAndInternalServerError: PartialFunction[Throwable, Result] = {

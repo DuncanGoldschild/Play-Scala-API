@@ -26,11 +26,13 @@ class TaskController @Inject() (
   // Display the task by its id with GET /task/{id}
   def findTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     taskRepository.find(id, request.username)
-      .map {
+      .flatMap {
         case Right(task) =>
-          addHypermediaToTaskAndOk(request.username, task)
-        case Left(_: NotFoundException) => NotFound
-        case Left(_: ForbiddenException) => Forbidden
+          for {
+            taskControls <- generateHypermediaTaskSelf(task)
+          } yield Ok(Json.obj("info" -> Json.toJson(task), "@controls" -> taskControls))
+        case Left(_: NotFoundException) => Future.successful(NotFound)
+        case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)
   }
 
@@ -169,8 +171,8 @@ class TaskController @Inject() (
     )
   }
 
-  private def addHypermediaToTaskAndOk(username: String, task: Task): Result = {
-    val listSelfMethods: List[JsObject] =
+  private def generateHypermediaTaskSelf(task: Task): Future[List[JsObject]] = {
+    Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TaskController.findTaskById(task.id).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteTask", "Delete this task", routes.TaskController.deleteTask(task.id).toString, "DELETE", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("updateTask", "Update this task", routes.TaskController.updateTask(task.id).toString, "PUT", "application/json") ::
@@ -181,6 +183,6 @@ class TaskController @Inject() (
         ControllerUtils.createCRUDActionJsonLink("updateDescription", "Change description of this task", routes.TaskController.changeDescriptionOfTask(task.id).toString, "PUT", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("addMemberToTask", "Add a member to this task", routes.TaskController.addMemberToTask(task.id).toString, "PUT", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteMemberFromTask", "Delete a member from this task", routes.TaskController.deleteMemberFromTask(task.id).toString, "PUT", "application/json") :: List()
-    Ok(Json.obj("info" -> Json.toJson(task), "@controls" -> listSelfMethods))
+    )
   }
 }

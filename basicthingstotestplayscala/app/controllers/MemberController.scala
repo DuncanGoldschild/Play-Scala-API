@@ -39,9 +39,9 @@ class MemberController @Inject() (
         memberAuth => {
           memberRepository.auth(memberAuth).map {
             case Some(token) =>
-              Ok(addHypermediaRoutesToToken(memberAuth.username, token))
+              Ok(generateHypermediaToken(memberAuth.username, token))
             case None =>
-              BadRequest(Json.obj("@controls" -> ControllerUtils.createCRUDActionJsonLink("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json")))
+              BadRequest(createMemberHypermedia)
           }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
@@ -95,7 +95,7 @@ class MemberController @Inject() (
   }
 
   // Returns a JSON object with hypermedia links
-  private def addHypermediaRoutesToToken(username: String, token: String): JsObject = {
+  private def generateHypermediaToken(username: String, token: String): JsObject = {
     val listSelfMethods: List[JsObject] =
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.MemberController.findMemberById(username).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("auth", "Authenticate a member", routes.MemberController.authMember.toString, "POST", "application/json") ::
@@ -103,5 +103,9 @@ class MemberController @Inject() (
         ControllerUtils.createCRUDActionJsonLink("delete", "Delete your account", routes.MemberController.deleteMember(username).toString, "DELETE", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("getBoards", "Get all your boards", routes.BoardController.allUserBoards.toString, "GET", "application/json") :: List()
     Json.obj("token" -> token, "username" -> username, "@controls" -> listSelfMethods)
+  }
+
+  private def createMemberHypermedia = {
+    Json.obj("@controls" -> ControllerUtils.createCRUDActionJsonLink("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json"))
   }
 }
