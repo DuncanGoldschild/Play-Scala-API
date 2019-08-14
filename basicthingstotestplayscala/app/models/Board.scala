@@ -124,6 +124,12 @@ object Member {
   implicit val memberWrites: Writes[Member] = Json.writes[Member]
   implicit val memberReads: Reads[Member] = Json.reads[Member]
 
+  def schema: JsObject = {
+    Json.obj(
+      "username" -> "String",
+      "password" -> "String"
+    )
+  }
 }
 
 case class MemberUpdateRequest (password: String, newPassword: String)

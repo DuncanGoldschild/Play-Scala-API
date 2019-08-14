@@ -54,6 +54,18 @@ object ControllerUtils {
       )
     )
   }
+
+  def createCRUDActionJsonLinkWithSchema(name: String, title: String, uri: String, verb: String, mediaType: String, schema: String) = {
+    Json.obj(
+      name -> Json.obj(
+        "title" -> title,
+        "href" -> uri,
+        "verb" -> verb,
+        "mediaType" -> mediaType,
+        "schema" -> schema
+      )
+    )
+  }
 }
 
 

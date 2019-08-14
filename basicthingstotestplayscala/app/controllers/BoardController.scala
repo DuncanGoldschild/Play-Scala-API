@@ -22,6 +22,10 @@ class BoardController @Inject() (
                                  appAction: AppAction
                                ) extends AbstractController(components) {
 
+  def test = Action {
+    Ok("OK fréro t co")
+  }
+
   // Returns a JSON of the board by its id with GET /board/{id}
   def findBoardById(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
     boardRepository.find(id, request.username)
@@ -31,7 +35,7 @@ class BoardController @Inject() (
             lists <- tasksListRepository.listAllListsFromBoardId(id)
             listsWithControls <- generateHypermediaListsControls(lists)
             boardControls <- generateHypermediaBoardSelfControls(board)
-          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.toJson(board), "lists", listsWithControls, boardControls)) // moin lisible ça qu'a la base
+          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.toJson(board), "lists", listsWithControls, boardControls))
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)
@@ -46,7 +50,7 @@ class BoardController @Inject() (
           for {
             boardsSelfControls <- generateHypermediaBoardsSelfControls
             boardsControls <- generateHypermediaBoardsControls(listOfBoards)
-          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.obj("username" -> username), "board", boardsControls, boardsSelfControls))
+          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.obj("username" -> username), "boards", boardsControls, boardsSelfControls))
       }
   }
 
@@ -66,8 +70,11 @@ class BoardController @Inject() (
       .fold(
         ControllerUtils.badRequest,
         board => {
-          boardRepository.createOne(board, request.username).map {
-            createdBoard: Board => Created(Json.toJson(createdBoard))
+          boardRepository.createOne(board, request.username).flatMap {
+            createdBoard: Board =>
+              for {
+                boardWithControls <- generateHypermediaBoardSelfControls(createdBoard)
+              } yield Created(Json.obj("info" -> Json.toJson(createdBoard), "@controls" -> boardWithControls))
           }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
@@ -125,10 +132,10 @@ class BoardController @Inject() (
     Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.BoardController.findBoardById(board.id).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteBoard", "Delete this board", routes.BoardController.deleteBoard(board.id).toString, "DELETE", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("updateLabel", "Update this board's label", routes.BoardController.updateBoard(board.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("addMemberToBoard", "Add a member to this board", routes.BoardController.addMemberToBoard(board.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("deleteMemberFromBoard", "Delete a member from this board", routes.BoardController.deleteMemberFromBoard(board.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("createList", "Create a new list in this board", routes.TasksListController.createNewListTask.toString, "POST", "application/json") :: List()
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateLabel", "Update this board's label", routes.BoardController.updateBoard(board.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("addMemberToBoard", "Add a member to this board", routes.BoardController.addMemberToBoard(board.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("deleteMemberFromBoard", "Delete a member from this board", routes.BoardController.deleteMemberFromBoard(board.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("createList", "Create a new list", routes.TasksListController.createNewListTask.toString, "POST", "application/json", routes.Schemas.createListSchema.toString) :: List()
     )
   }
 
@@ -142,7 +149,7 @@ class BoardController @Inject() (
   private def generateHypermediaBoardsSelfControls: Future[List[JsObject]] = {
     Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.BoardController.allUserBoards().toString, "GET", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("create", "Create a new board", routes.BoardController.createNewBoard.toString, "POST", "application/json") :: List()
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("create", "Create a new board", routes.BoardController.createNewBoard.toString, "POST", "application/json",routes.Schemas.createBoardSchema.toString) :: List()
     )
   }
 

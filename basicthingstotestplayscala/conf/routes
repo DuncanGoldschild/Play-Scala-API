@@ -4,26 +4,11 @@
 # ~~~~
 
 
-#Read all
-#GET     /foods                      controllers.FoodController.listFood
-
-#Create one
-#POST    /foods                      controllers.FoodController.newFood
-
-#Read one
-#GET     /food/:id                   controllers.FoodController.findById(id : String)
-
-#Delete one
-#DELETE  /food/:id                   controllers.FoodController.deleteFood(id : String)
-
-#Update one
-#PUT     /food/:id                   controllers.FoodController.updateFood(id : String)
-
-
-
 #Trello Routing
 
 #Board Requests
+GET     /                           controllers.BoardController.test
+
 GET     /boards                     controllers.BoardController.allUserBoards
 POST    /boards                     controllers.BoardController.createNewBoard
 GET     /board/:id                  controllers.BoardController.findBoardById(id : String)
@@ -63,6 +48,7 @@ PUT     /member/:username           controllers.MemberController.updateMember(us
 DELETE  /member/:username           controllers.MemberController.deleteMember(username : String)
 POST    /members/auth               controllers.MemberController.authMember
 
+
 #Schemas
 GET     /schema/createBoard         controllers.Schemas.createBoardSchema
 GET     /schema/updateBoard         controllers.Schemas.updateBoardSchema
@@ -72,6 +58,8 @@ GET     /schema/updateDescription   controllers.Schemas.descriptionUpdateSchema
 GET     /schema/createList          controllers.Schemas.createListSchema
 GET     /schema/createTask          controllers.Schemas.createTaskSchema
 GET     /schema/changeList          controllers.Schemas.listIdOfTaskUpdateSchema
+GET     /schema/updatePassword      controllers.Schemas.updatePasswordMemberSchema
+GET     /schema/auth                controllers.Schemas.authSchema
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

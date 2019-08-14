@@ -18,6 +18,14 @@ class Schemas @Inject() (
     Future.successful(Ok(BoardCreationRequest.schema))
   }
 
+  def authSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+    Future.successful(Ok(Member.schema))
+  }
+
+  def updatePasswordMemberSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+    Future.successful(Ok(MemberUpdateRequest.schema))
+  }
+
   def createListSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
     Future.successful(Ok(TasksListCreationRequest.schema))
   }

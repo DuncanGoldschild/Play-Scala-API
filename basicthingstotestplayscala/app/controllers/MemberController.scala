@@ -37,11 +37,12 @@ class MemberController @Inject() (
       memberResult.fold(
         ControllerUtils.badRequest,
         memberAuth => {
-          memberRepository.auth(memberAuth).map {
+          memberRepository.auth(memberAuth).flatMap {
             case Some(token) =>
-              Ok(generateHypermediaToken(memberAuth.username, token))
-            case None =>
-              BadRequest(createMemberHypermedia)
+              for {
+                memberWithControls <- generateHypermediaMember(memberAuth.username)
+              } yield Ok(Json.obj("info" -> tokenJson(token), "@controls" -> memberWithControls))
+            case None => Future.successful(BadRequest(createMemberHypermedia))
           }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
@@ -70,9 +71,12 @@ class MemberController @Inject() (
       .fold(
         ControllerUtils.badRequest,
         member => {
-          memberRepository.createOne(member).map {
-            case Some(createdMember) => Created(Json.toJson(createdMember))
-            case None => BadRequest("Username already exists")
+          memberRepository.createOne(member).flatMap {
+            case Some(createdMember) =>
+              for {
+                memberWithControls <- generateHypermediaMember(createdMember.username)
+              } yield Created(Json.obj("info" -> Json.toJson(createdMember), "@controls" -> memberWithControls))
+            case None => Future.successful(BadRequest("Username already exists"))
           }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
@@ -95,15 +99,16 @@ class MemberController @Inject() (
   }
 
   // Returns a JSON object with hypermedia links
-  private def generateHypermediaToken(username: String, token: String): JsObject = {
-    val listSelfMethods: List[JsObject] =
+  private def generateHypermediaMember(username: String): Future[List[JsObject]] = {
+    Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.MemberController.findMemberById(username).toString, "GET", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("auth", "Authenticate a member", routes.MemberController.authMember.toString, "POST", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("changePassword", "Update your password", routes.MemberController.updateMember(username).toString, "PUT", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("auth", "Authenticate a member", routes.MemberController.authMember.toString, "POST", "application/json", routes.Schemas.authSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("changePassword", "Update your password", routes.MemberController.updateMember(username).toString, "PUT", "application/json", routes.Schemas.updatePasswordMemberSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLink("delete", "Delete your account", routes.MemberController.deleteMember(username).toString, "DELETE", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("getBoards", "Get all your boards", routes.BoardController.allUserBoards.toString, "GET", "application/json") :: List()
-    Json.obj("token" -> token, "username" -> username, "@controls" -> listSelfMethods)
+    )
   }
+  private def tokenJson(token: String) = Json.obj("token" -> token)
 
   private def createMemberHypermedia = {
     Json.obj("@controls" -> ControllerUtils.createCRUDActionJsonLink("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json"))

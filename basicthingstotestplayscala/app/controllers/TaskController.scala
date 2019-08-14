@@ -61,10 +61,13 @@ class TaskController @Inject() (
     taskResult.fold(
       ControllerUtils.badRequest,
       newTask => {
-        taskRepository.create(newTask, request.username).map {
-          case Right(createdTasksList) => Created(Json.toJson(createdTasksList))
-          case Left(_: ForbiddenException) => Forbidden("You don't have access to this List")
-          case Left(_: BadRequestException) => BadRequest("List does not exist")
+        taskRepository.create(newTask, request.username).flatMap {
+          case Right(createdTask) =>
+            for {
+              taskWithControls <- generateHypermediaTaskSelf(createdTask)
+            } yield Created(Json.obj("info" -> Json.toJson(createdTask), "@controls" -> taskWithControls))
+          case Left(_: ForbiddenException) => Future.successful(Forbidden("You don't have access to this List"))
+          case Left(_: BadRequestException) => Future.successful(BadRequest("List does not exist"))
         }.recover(ControllerUtils.logAndInternalServerError)
       }
     )
@@ -178,11 +181,11 @@ class TaskController @Inject() (
         ControllerUtils.createCRUDActionJsonLink("updateTask", "Update this task", routes.TaskController.updateTask(task.id).toString, "PUT", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("archiveTask", "Archive this task", routes.TaskController.archiveTask(task.id, true).toString, "PUT", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("restoreTask", "Restore this task", routes.TaskController.archiveTask(task.id, false).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("updateListId", "Update the listId of this task", routes.TaskController.changeParentListOfTask(task.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("updateLabel", "Update the label of this task", routes.TaskController.changeLabelOfTask(task.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("updateDescription", "Change description of this task", routes.TaskController.changeDescriptionOfTask(task.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("addMemberToTask", "Add a member to this task", routes.TaskController.addMemberToTask(task.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("deleteMemberFromTask", "Delete a member from this task", routes.TaskController.deleteMemberFromTask(task.id).toString, "PUT", "application/json") :: List()
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateListId", "Update the listId of this task", routes.TaskController.changeParentListOfTask(task.id).toString, "PUT", "application/json", routes.Schemas.listIdOfTaskUpdateSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateLabel", "Update the label of this task", routes.TaskController.changeLabelOfTask(task.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateDescription", "Change description of this task", routes.TaskController.changeDescriptionOfTask(task.id).toString, "PUT", "application/json", routes.Schemas.descriptionUpdateSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("addMemberToTask", "Add a member to this task", routes.TaskController.addMemberToTask(task.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema().toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("deleteMemberFromTask", "Delete a member from this task", routes.TaskController.deleteMemberFromTask(task.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) :: List()
     )
   }
 }

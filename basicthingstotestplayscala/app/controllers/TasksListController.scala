@@ -62,10 +62,13 @@ class TasksListController @Inject()(
       .fold(
         ControllerUtils.badRequest,
         listToCreate => {
-          listTaskRepository.create(listToCreate, request.username).map {
-            case Right (createdTasksList) => Created(Json.toJson(createdTasksList))
-            case Left (exception: ForbiddenException) => Forbidden(exception.message)
-            case Left (exception: BadRequestException) => BadRequest(exception.message)
+          listTaskRepository.create(listToCreate, request.username).flatMap {
+            case Right (createdTasksList) =>
+              for {
+                listWithControls <- generateHypermediaListSelfControls(createdTasksList)
+              } yield Created(Json.obj("info" -> Json.toJson(createdTasksList), "@controls" -> listWithControls))
+            case Left (exception: ForbiddenException) => Future.successful(Forbidden(exception.message))
+            case Left (exception: BadRequestException) => Future.successful(BadRequest(exception.message))
           }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
@@ -123,10 +126,10 @@ class TasksListController @Inject()(
     Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteList", "Delete this list", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("updateListLabel", "Update this list's label", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("addMemberToList", "Add a member to this list", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("deleteMemberFromList", "Delete a member from this list", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("createTask", "Create a new task in this list", routes.TaskController.createNewTask.toString, "POST", "application/json") :: List()
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateListLabel", "Update this list's label", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("addMemberToList", "Add a member to this list", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("deleteMemberFromList", "Delete a member from this list", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("createTask", "Create a new task", routes.TaskController.createNewTask.toString, "POST", "application/json", routes.Schemas.createTaskSchema.toString) :: List()
     )
   }
 
