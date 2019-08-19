@@ -3,46 +3,86 @@ package utils
 import javax.inject.Inject
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.{JsError, JsPath, Json, JsonValidationError}
+import play.api.libs.json.{JsError, JsObject, JsPath, JsValue, Json, JsonValidationError}
 import play.api.mvc._
-import services.JwtGenerator
+import services.{BCryptServiceImpl, JwtServiceImpl}
 
 import scala.collection.Seq
 import scala.concurrent._
 
-
-
-
-class ControllerUtils @Inject() (
-                                  components: ControllerComponents
-                                ) extends AbstractController(components) {
+object ControllerUtils {
+  val jwtService = new JwtServiceImpl
+  val bcryptService = new BCryptServiceImpl
 
   val logger = Logger(this.getClass)
 
   def badRequest(errors: Seq[(JsPath, Seq[JsonValidationError])]): Future[Result] = {
-    Future.successful(BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+    Future.successful(Results.BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
+  }
+
+  def hypermediaStructureResponse(info: JsValue, listName: String, listObjects: List[JsObject], selfControls: List[JsObject] ) = {
+    Json.obj("info" -> info, listName -> listObjects, "@controls" -> selfControls)
   }
 
   def logAndInternalServerError: PartialFunction[Throwable, Result] = {
     case e: Throwable =>
       logger.error(e.getMessage, e)
-      InternalServerError
+      Results.Status(Status.INTERNAL_SERVER_ERROR)
+  }
+
+  def createIdAndLabelElementJsonLink(id: String, label: String, name: String, uri: String, verb: String, mediaType: String) = {
+    Json.obj(
+      "id" -> id,
+      "label" -> label,
+      "@controls" -> Json.obj(
+        name -> Json.obj(
+          "href" -> uri,
+          "verb" -> verb,
+          "mediaType" -> mediaType
+        )
+      )
+    )
+  }
+
+  def createCRUDActionJsonLink(name: String, title: String, uri: String, verb: String, mediaType: String) = {
+    Json.obj(
+      name -> Json.obj(
+        "title" -> title,
+        "href" -> uri,
+        "verb" -> verb,
+        "mediaType" -> mediaType
+      )
+    )
+  }
+
+  def createCRUDActionJsonLinkWithSchema(name: String, title: String, uri: String, verb: String, mediaType: String, schema: String) = {
+    Json.obj(
+      name -> Json.obj(
+        "title" -> title,
+        "href" -> uri,
+        "verb" -> verb,
+        "mediaType" -> mediaType,
+        "schema" -> schema
+      )
+    )
   }
 }
 
+
 class UserRequest[A](val username: String, request: Request[A]) extends WrappedRequest[A](request)
 
-class AppAction @Inject()(val parser: BodyParsers.Default,
-                          jwtService: JwtGenerator)
+class AppAction @Inject()(val parser: BodyParsers.Default)
                          (implicit val executionContext: ExecutionContext)
   extends ActionBuilder[UserRequest, AnyContent] {
 
-  override def invokeBlock[A](request: Request[A], block: UserRequest[A] => Future[Result]) : Future[Result] = {
+    val jwtService = new JwtServiceImpl
+
+    override def invokeBlock[A](request: Request[A], block: UserRequest[A] => Future[Result]): Future[Result] = {
     request.headers.get("Authorization")
       .map{
         token: String => jwtService.getUsernameFromToken(token)
           .map {
-            username : String => block(new UserRequest[A](username, request))
+            username: String => block(new UserRequest[A](username, request))
           }.getOrElse(unauthorized)
       }.getOrElse(unauthorized)
   }

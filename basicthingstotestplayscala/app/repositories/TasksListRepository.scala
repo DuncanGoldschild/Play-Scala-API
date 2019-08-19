@@ -13,28 +13,72 @@ import models.{BadRequestException, ForbiddenException, NotFoundException, Tasks
 class MongoTasksListRepository @Inject()(
                                        components: ControllerComponents,
                                        val reactiveMongoApi: ReactiveMongoApi,
-                                       boardRepository: MongoBoardRepository
+                                       boardRepository: MongoBoardRepository,
+                                       memberRepository: MongoMemberRepository
                                      ) extends AbstractController(components)
   with MongoController
   with ReactiveMongoComponents
   with GenericCRUDRepository [TasksList] {
 
+  private val taskRepository: MongoTaskRepository = new MongoTaskRepository(components, reactiveMongoApi, boardRepository, this, memberRepository)
+
   override def collection: Future[BSONCollection] =
     database.map(_.collection[BSONCollection]("listTask"))
 
-  def createOne(newListTask: TasksListCreationRequest, username : String): Future[TasksList] = {
+  def createOne(newListTask: TasksListCreationRequest, username: String): Future[TasksList] = {
     val insertedListTask = TasksList(BSONObjectID.generate().stringify, newListTask.label, newListTask.boardId, Seq(username))
     collection.flatMap(_.insert.one(insertedListTask)).map { _ => insertedListTask }
   }
 
 
-  def updateOne (id: String, newListTask: TasksListUpdateRequest, boardId : String): Future[Option[Unit]] = {
+  def updateOne (id: String, newListTask: TasksListUpdateRequest, boardId: String): Future[Option[Unit]] = {
     val updatedListTask = TasksList(id, newListTask.label, boardId, newListTask.membersUsername)
     collection.flatMap(_.update.one(q = idSelector(id), u = updatedListTask, upsert = false, multi = false))
       .map (verifyUpdatedOneDocument)
   }
 
-  def create(newListTask: TasksListCreationRequest, username : String): Future[Either[Exception, TasksList]] = {
+  def addMember(id: String, username: String, addedMemberUsername: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          if (isUsernameContainedInTasksList(addedMemberUsername, tasksList)) Future.successful(Left(BadRequestException("User already has access to this tasksList")))
+          else memberRepository.findByUsername(addedMemberUsername).flatMap {
+            case Some(_) =>
+              addOneMemberToDocument(id, addedMemberUsername)
+                .flatMap {
+                  _ => boardRepository.addOneMemberToDocument(tasksList.boardId, addedMemberUsername)
+                    .map {
+                      _ => Right()
+                    }
+                }
+            case None => Future.successful(Left(BadRequestException("User does not exist")))
+          }
+
+        case None => Future.successful(Left(NotFoundException("List not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this tasksList")))
+      }
+  }
+
+  def deleteMember(id: String, username: String, deletedMemberUsername: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
+          if (!isUsernameContainedInTasksList(deletedMemberUsername, tasksList)) Future.successful(Left(BadRequestException("User does not have access to this tasksList")))
+          else
+            deleteOneMemberFromDocument(id, deletedMemberUsername)
+            .flatMap {
+              _ =>
+                taskRepository.deleteOneMemberFromAllDocumentSelected(BSONDocument("listId" -> id), deletedMemberUsername)
+                  .map {
+                    _ => Right()
+                  }
+            }
+        case None => Future.successful(Left(NotFoundException("List not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this tasksList")))
+      }
+  }
+  
+  def create(newListTask: TasksListCreationRequest, username: String): Future[Either[Exception, TasksList]] = {
     boardRepository.findOne(newListTask.boardId)
       .flatMap {
         case Some(board) if isUsernameContainedInBoard(username, board) =>
@@ -47,7 +91,7 @@ class MongoTasksListRepository @Inject()(
       }
   }
 
-  def update (tasksListUpdateRequestId : String, tasksListUpdateRequest: TasksListUpdateRequest, username : String): Future[Either[Exception, Unit]] = {
+  def update (tasksListUpdateRequestId: String, tasksListUpdateRequest: TasksListUpdateRequest, username: String): Future[Either[Exception, Unit]] = {
     findOne(tasksListUpdateRequestId)
       .flatMap {
         case Some(tasksList: TasksList) if isUsernameContainedInTasksList(username, tasksList) =>
@@ -60,20 +104,23 @@ class MongoTasksListRepository @Inject()(
       }
   }
 
-  def delete (tasksListId : String, username : String) : Future[Either[Exception, Unit]] = {
+  def delete (tasksListId: String, username: String): Future[Either[Exception, Unit]] = {
     findOne(tasksListId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) =>
           deleteOne(tasksListId)
-            .map {
-              case Some (_) => Right()
+            .flatMap {
+              case Some(_) => taskRepository.deleteAllDocumentSelected(BSONDocument("listId" -> tasksListId))
+                .map {
+                  _ => Right()
+                }
             }
         case None => Future.successful(Left(NotFoundException()))
         case _ => Future.successful(Left(ForbiddenException()))
       }
   }
 
-  def find (tasksListId : String, username : String) : Future[Either[Exception, TasksList]] = {
+  def find (tasksListId: String, username: String): Future[Either[Exception, TasksList]] = {
     findOne(tasksListId)
       .flatMap {
         case Some(tasksList) if isUsernameContainedInTasksList(username, tasksList) => Future.successful(Right(tasksList))

@@ -1,6 +1,6 @@
 package repositories
 
-import models.{Board, TasksList}
+import models.{Board, Task, TasksList}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -11,7 +11,7 @@ import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 
 
 trait GenericCRUDRepository [A] {
-    def collection : Future[BSONCollection]
+    def collection: Future[BSONCollection]
 
   def listAll(implicit bsonReader: BSONDocumentReader[A]): Future[List[A]] = listAll(-1)
 
@@ -40,7 +40,6 @@ trait GenericCRUDRepository [A] {
       .map(verifyUpdatedOneDocument)
   }
 
-
   def idSelector (id: String) = BSONDocument("id" -> id)
 
   def verifyUpdatedOneDocument(writeResult: WriteResult): Option[Unit] =
@@ -50,4 +49,78 @@ trait GenericCRUDRepository [A] {
 
   def isUsernameContainedInTasksList (username: String, tasksList: TasksList): Boolean = tasksList.membersUsername.contains(username)
 
+  def listAllListsFromBoardId(id: String): Future[List[TasksList]] = {
+    val cursor: Future[Cursor[TasksList]] = collection.map {
+      _.find(BSONDocument("boardId" -> id)).cursor[TasksList](ReadPreference.primary)
+    }
+    cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[TasksList]]()))
+  }
+
+  def listAllTasksFromListId(id: String): Future[List[Task]] = {
+    val cursor: Future[Cursor[Task]] = collection.map {
+      _.find(BSONDocument("listId" -> id)).cursor[Task](ReadPreference.primary)
+    }
+    cursor.flatMap(_.collect[List](-1, Cursor.FailOnError[List[Task]]()))
+  }
+
+  def addOneMemberToDocument(id: String, addedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      idSelector(id),
+      BSONDocument("$addToSet" -> BSONDocument("membersUsername" -> addedUsername)),
+      fetchNewObject = true)
+      .map {
+        _.result[A]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
+
+  def deleteOneMemberFromDocument(id: String, deletedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      idSelector(id),
+      BSONDocument("$pull" -> BSONDocument("membersUsername" -> deletedUsername)),
+      fetchNewObject = true)
+      .map {
+        _.result[A]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
+
+  def deleteOneMemberFromAllDocumentSelected(selector: BSONDocument, deletedUsername: String)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      selector,
+      BSONDocument("$pull" -> BSONDocument("membersUsername" -> deletedUsername)),
+      fetchNewObject = true)
+      .map {
+        _.result[A]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
+
+  def deleteAllDocumentSelected(selector: BSONDocument)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
+    collection.flatMap(_.delete.one(selector))
+      .map(verifyUpdatedOneDocument)
+  }
+
+  def updateField(selector: BSONDocument, field: BSONDocument): Future[Option[Unit]] = {
+    collection.flatMap(_.findAndUpdate(
+      selector,
+      BSONDocument("$set" -> field),
+      fetchNewObject = true)
+      .map {
+        _.result[Task]
+          .map {
+            _ =>
+          }
+      }
+    )
+  }
 }

@@ -1,7 +1,6 @@
 package models
 
-import play.api.libs.json.{Json, Reads, Writes}
-
+import play.api.libs.json.{JsObject, Json, Reads, Writes}
 import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, Macros}
 
 case class Board (id: String, label: String, membersUsername: Seq[String])
@@ -20,13 +19,24 @@ object BoardCreationRequest{
 
   implicit val boardCreationRequestReads: Reads[BoardCreationRequest] = Json.reads[BoardCreationRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String"
+    )
+  }
 }
 
 case class BoardUpdateRequest (label: String, membersUsername: Seq[String])
-object BoardUpdateRequest{
+object BoardUpdateRequest{ // todo: delete all full-update ?
 
   implicit val boardCreationRequestReads: Reads[BoardUpdateRequest] = Json.reads[BoardUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "membersUsername" -> "Seq[String]"
+    )
+  }
 }
 
 case class TasksList(id: String, label: String, boardId: String, membersUsername: Seq[String])
@@ -45,6 +55,12 @@ object TasksListCreationRequest{
 
   implicit val listCreationRequestReads: Reads[TasksListCreationRequest] = Json.reads[TasksListCreationRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "boardId" -> "String"
+    )
+  }
 }
 
 case class TasksListUpdateRequest(label: String, membersUsername: Seq[String])
@@ -54,7 +70,7 @@ object TasksListUpdateRequest{
 
 }
 
-case class Task (id: String, label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
+case class Task (id: String, label: String, description: String, archived: Boolean, listId: String, membersUsername: Seq[String])
 object Task {
 
   implicit val taskReader: BSONDocumentReader[Task] = Macros.reader[Task]
@@ -65,18 +81,38 @@ object Task {
 
 }
 
-case class TaskCreationRequest (label: String, description: String, archived : Boolean, listId: String)
+case class TaskCreationRequest (label: String, description: String, listId: String)
 object TaskCreationRequest{
 
   implicit val taskCreationRequestReads: Reads[TaskCreationRequest] = Json.reads[TaskCreationRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "description" -> "String",
+      "listId" -> "String"
+    )
+  }
 }
 
-case class TaskUpdateRequest (label: String, description: String, archived : Boolean, listId: String, membersUsername: Seq[String])
+case class TaskUpdateRequest (label: String, description: String, archived: Boolean, listId: String, membersUsername: Seq[String])
 object TaskUpdateRequest{
 
   implicit val listUpdateRequestReads: Reads[TaskUpdateRequest] = Json.reads[TaskUpdateRequest]
 
+
+}
+
+case class ListIdOfTaskUpdateRequest (listId: String)
+object ListIdOfTaskUpdateRequest{
+
+  implicit val listIdOfTaskUpdateRequestReads: Reads[ListIdOfTaskUpdateRequest] = Json.reads[ListIdOfTaskUpdateRequest]
+
+  def schema: JsObject = {
+    Json.obj(
+      "listId" -> "String"
+    )
+  }
 }
 
 case class Member (username: String, password: String)
@@ -88,11 +124,59 @@ object Member {
   implicit val memberWrites: Writes[Member] = Json.writes[Member]
   implicit val memberReads: Reads[Member] = Json.reads[Member]
 
+  def schema: JsObject = {
+    Json.obj(
+      "username" -> "String",
+      "password" -> "String"
+    )
+  }
 }
 
-case class MemberUpdateRequest (password: String, newPassword : String)
+case class MemberUpdateRequest (password: String, newPassword: String)
 object MemberUpdateRequest {
 
   implicit val memberUpdateRequestReads: Reads[MemberUpdateRequest] = Json.reads[MemberUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "password" -> "String",
+      "newPassword" -> "String"
+    )
+  }
+}
+
+case class MemberAddOrDelete (username: String)
+object MemberAddOrDelete {
+
+  implicit val memberAddOrDeleteReads: Reads[MemberAddOrDelete] = Json.reads[MemberAddOrDelete]
+
+  def schema: JsObject = {
+    Json.obj(
+      "username" -> "String"
+    )
+  }
+}
+
+case class LabelUpdateRequest (label: String)
+object LabelUpdateRequest {
+
+  implicit val labelUpdateReads: Reads[LabelUpdateRequest] = Json.reads[LabelUpdateRequest]
+
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String"
+    )
+  }
+}
+
+case class DescriptionUpdateRequest (description: String)
+object DescriptionUpdateRequest {
+
+  implicit val descriptionUpdateReads: Reads[DescriptionUpdateRequest] = Json.reads[DescriptionUpdateRequest]
+
+  def schema: JsObject = {
+    Json.obj(
+      "description" -> "String"
+    )
+  }
 }
