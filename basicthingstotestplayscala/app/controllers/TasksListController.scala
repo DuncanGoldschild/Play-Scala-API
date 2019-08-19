@@ -25,7 +25,7 @@ class TasksListController @Inject()(
                                 ) extends AbstractController(components) {
 
   // Display the ListTask by its id with GET /list/{id}
-  def findListTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  def findListTaskById(id: String): Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     listTaskRepository.find(id, request.username)
       .flatMap {
         case Right(list) =>
@@ -40,7 +40,7 @@ class TasksListController @Inject()(
   }
 
   // Display all ListTask elements with GET /lists
-  def allListTasks: Action[AnyContent] = appAction.async { request =>
+  def allListTasks: Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     listTaskRepository.listAllFromUsername(request.username).map {
       list => Ok(Json.toJson(list))
     }.recover(ControllerUtils.logAndInternalServerError)

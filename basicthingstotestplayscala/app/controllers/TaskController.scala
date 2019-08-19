@@ -24,7 +24,7 @@ class TaskController @Inject() (
                                 ) extends AbstractController(components) {
 
   // Display the task by its id with GET /task/{id}
-  def findTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+  def findTaskById(id: String): Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     taskRepository.find(id, request.username)
       .flatMap {
         case Right(task) =>
@@ -37,7 +37,7 @@ class TaskController @Inject() (
   }
 
   // Display all Task elements with GET /tasks
-  def allTasks: Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  def allTasks: Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     taskRepository.listAllFromUsername(request.username)
       .map {
         list => Ok(Json.toJson(list))
