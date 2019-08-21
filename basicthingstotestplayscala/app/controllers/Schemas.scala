@@ -13,11 +13,11 @@ class Schemas @Inject() (
                           appAction: AppAction
                         ) extends AbstractController(components) {
 
-  def createBoardSchema: Action[AnyContent] = appAction.async { _ =>
+  def createBoardSchema: Action[AnyContent] = Action.async { _ =>
     Future.successful(Ok(BoardCreationRequest.schema))
   }
 
-  def authSchema: Action[AnyContent] = appAction.async { _ =>
+  def authSchema: Action[AnyContent] = Action.async { _ =>
     Future.successful(Ok(Member.schema))
   }
 

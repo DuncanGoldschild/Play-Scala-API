@@ -20,8 +20,8 @@ object ControllerUtils {
     Future.successful(Results.BadRequest(Json.obj("status" -> "Error", "message" -> JsError.toJson(errors))))
   }
 
-  def hypermediaStructureResponse(info: JsValue, listName: String, listObjects: List[JsObject], selfControls: List[JsObject] ) = {
-    Json.obj("info" -> info, listName -> listObjects, "@controls" -> selfControls)
+  def hypermediaStructureResponse(info: JsValue, listObjects: List[JsObject], selfControls: List[JsObject] ) = {
+    Json.obj("info" -> info, "elements" -> listObjects, "@controls" -> selfControls)
   }
 
   def logAndInternalServerError: PartialFunction[Throwable, Result] = {

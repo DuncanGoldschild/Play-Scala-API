@@ -37,7 +37,7 @@ class BoardController @Inject() (
             lists <- tasksListRepository.listAllListsFromBoardId(id)
             listsWithControls <- generateHypermediaListsControls(lists)
             boardControls <- generateHypermediaBoardSelfControls(board)
-          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.toJson(board), "lists", listsWithControls, boardControls))
+          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.toJson(board), listsWithControls, boardControls))
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)
@@ -52,7 +52,7 @@ class BoardController @Inject() (
           for {
             boardsSelfControls <- generateHypermediaBoardsSelfControls
             boardsControls <- generateHypermediaBoardsControls(listOfBoards)
-          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.obj("username" -> username), "boards", boardsControls, boardsSelfControls))
+          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.obj("username" -> username), boardsControls, boardsSelfControls))
       }
   }
 
@@ -132,8 +132,8 @@ class BoardController @Inject() (
 
   private def generateWelcomeHypermedia: Future[List[JsObject]] = {
     Future.successful(
-      ControllerUtils.createCRUDActionJsonLink("auth", "Self informations", routes.MemberController.authMember.toString, "POST", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json") :: List()
+      ControllerUtils.createCRUDActionJsonLinkWithSchema("auth", "Authenticate", routes.MemberController.authMember.toString, "POST", "application/json", routes.Schemas.authSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json", routes.Schemas.authSchema.toString) :: List()
     )
   }
 

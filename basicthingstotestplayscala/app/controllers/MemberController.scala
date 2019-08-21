@@ -27,7 +27,7 @@ class MemberController @Inject() (
   def findMemberById(username: String): Action[AnyContent] = appAction.async {
     memberRepository.findOne(username)
       .map {
-        case Some(member) => Ok(Json.toJson(member))
+        case Some(member) => Ok(Json.obj("info" -> member))
         case None => NotFound
       }.recover(ControllerUtils.logAndInternalServerError)
   }

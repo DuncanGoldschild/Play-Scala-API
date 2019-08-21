@@ -33,7 +33,7 @@ class TasksListController @Inject()(
             tasks <- taskRepository.listAllTasksFromListId(id)
             listWithControls <- generateHypermediaListSelfControls(list)
             tasksControls <- generateHypermediaTasksControls(tasks)
-          } yield Ok(Json.obj("info" -> Json.toJson(list), "tasks" -> tasksControls, "@controls" -> listWithControls))
+          } yield Ok(Json.obj("info" -> Json.toJson(list), "elements" -> tasksControls, "@controls" -> listWithControls))
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)

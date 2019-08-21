@@ -1,27 +1,49 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png" />
-    <HelloWorld msg="Welcome to Your Vue.js App" />
+    <v-list-item v-for="[field, value] of Object.entries(infos)" v-bind:key="field">
+      <v-list-item-content>
+        <v-list-item-title>{{field}}:{{value}}</v-list-item-title>
+      </v-list-item-content>
+    </v-list-item>
+    <v-list-item v-for="element in elements" v-bind:key="element.label">
+      <v-list-item-content>
+        <v-list-item-title>{{element}}</v-list-item-title>
+      </v-list-item-content>
+    </v-list-item>
+    <div v-for="control in controls" v-bind:key="control.title">
+      <GenericPage v-bind:control="control" />
+    </div>
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
-import HelloWorld from "@/components/HelloWorld.vue";
-import trelloService from "../services/trelloService";
+import GenericPage from "@/components/GenericPage.vue";
+import infoService from "../services/infoService";
 
 export default {
   name: "home",
   components: {
-    HelloWorld
+    GenericPage
   },
-  created() {
-    trelloService.getControls().then((response) => {
-      console.log(response.data);
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+  data() {
+    return {
+      controls: [],
+      elements: [{ label: "Element 1" }],
+      infos: { Welcome: "Decide what you want to do" }
+    };
+  },
+
+  mounted() {
+    infoService
+      .firstLink()
+      .then(firstControls => {
+        console.log("home");
+        this.controls = firstControls;
+      })
+      .catch(error => {
+        console.log(error);
+      });
   }
 };
 </script>
