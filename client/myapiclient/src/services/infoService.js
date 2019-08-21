@@ -1,11 +1,6 @@
 import trelloService from "./trelloService";
 
 export default {
-    controls: [],
-    infos: {},
-    addControl(json) {
-        this.controls.push(json)
-    },
     firstLink() {
         return new Promise((resolve, reject) => {
             var controlsBuffer = [];
@@ -21,17 +16,15 @@ export default {
                                 controlsBuffer.push(action);
                             })
                             .catch(error => {
-                                console.log(error);
+                                reject(error);
                             });
                     });
                 })
                 .then(() => {
-                    console.log("service")
-                    console.log(controlsBuffer)
                     resolve(controlsBuffer)
                 })
                 .catch(error => {
-                    console.log(error);
+                    reject(error);
                 });
         })
     }
@@ -48,6 +41,9 @@ export default {
                             console.log(createResponse)
                             if (createResponse.data["info"]) {
                                 infoBuffer = (createResponse.data["info"])
+                                if (infoBuffer.token) {
+                                    trelloService.setToken(infoBuffer.token)
+                                }
                             }
                             if (createResponse.data["elements"]) {
                                 elementsBuffer = createResponse.data["elements"]
@@ -80,6 +76,42 @@ export default {
                             reject(error);
                         });
                     break;
+                case "PUT":
+                    trelloService.update(route, data)
+                        .then(updateResponse => {
+                            console.log(updateResponse)
+                        })
+                        .then(() => {
+                            resolve(
+                                {
+                                    infoHTTP: infoBuffer,
+                                    controlsHTTP: controlsBuffer,
+                                    elementsHTTP: elementsBuffer
+                                }
+                            )
+                        })
+                        .catch(error => {
+                            reject(error);
+                        });
+                    break;
+                    case "DELETE":
+                        trelloService.delete(route)
+                            .then(deleteResponse => {
+                                console.log(deleteResponse)
+                            })
+                            .then(() => {
+                                resolve(
+                                    {
+                                        infoHTTP: infoBuffer,
+                                        controlsHTTP: controlsBuffer,
+                                        elementsHTTP: elementsBuffer
+                                    }
+                                )
+                            })
+                            .catch(error => {
+                                reject(error);
+                            });
+                        break;
                 case "GET":
                     trelloService.getRoute(route)
                         .then(response => {
@@ -89,10 +121,28 @@ export default {
                             }
                             if (response.data["elements"]) {
                                 elementsBuffer = response.data["elements"]
+                                response.data["elements"]
+                                    .forEach(function (element) {
+                                        var action = Object.values(element["@controls"])[0]
+                                        if (action.schema) {
+                                            trelloService
+                                                .getRoute(action.schema)
+                                                .then(responseSchema => {
+                                                    action.schema = responseSchema.data;
+                                                    controlsBuffer.push(action);
+                                                })
+                                                .catch(error => {
+                                                    reject(error);
+                                                });
+                                        }
+                                        else {
+                                            controlsBuffer.push(action)
+                                        }
+                                    })
                             }
                             if (response.data["@controls"]) {
-                                response.data["@controls"].forEach(function (element) {
-                                    var action = Object.values(element)[0];
+                                response.data["@controls"].forEach(function (control) {
+                                    var action = Object.values(control)[0];
                                     trelloService
                                         .getRoute(action.schema)
                                         .then(responseSchema => {
@@ -114,7 +164,6 @@ export default {
                             }
                         })
                         .then(() => {
-                            console.log(elementsBuffer)
                             resolve(
                                 {
                                     infoHTTP: infoBuffer,
@@ -128,12 +177,7 @@ export default {
                         });
                     break;
                 default:
-                    resolve(
-                        {
-                            infoHTTP: infoBuffer,
-                            controlsHTTP: controlsBuffer
-                        }
-                    )
+                    console.log(verb + "invalid")
             }
         })
     }

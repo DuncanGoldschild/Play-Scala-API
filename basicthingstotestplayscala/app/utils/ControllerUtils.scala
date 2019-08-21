@@ -36,6 +36,7 @@ object ControllerUtils {
       "label" -> label,
       "@controls" -> Json.obj(
         name -> Json.obj(
+          "title" -> ("Get: "+label),
           "href" -> uri,
           "verb" -> verb,
           "mediaType" -> mediaType

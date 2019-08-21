@@ -8,7 +8,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.MongoTaskRepository
-import models.{BadRequestException, DescriptionUpdateRequest, ForbiddenException, LabelUpdateRequest, ListIdOfTaskUpdateRequest, MemberAddOrDelete, NotFoundException, Task, TaskCreationRequest, TaskNotArchivedException, TaskUpdateRequest}
+import models.{ArchiveOrRestoreRequest, BadRequestException, DescriptionUpdateRequest, ForbiddenException, LabelUpdateRequest, ListIdOfTaskUpdateRequest, MemberAddOrDelete, NotFoundException, Task, TaskCreationRequest, TaskNotArchivedException, TaskUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -45,14 +45,16 @@ class TaskController @Inject() (
   }
 
   // Delete with DELETE /task/{id}
-  def deleteTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
-    taskRepository.delete(id, request.username)
-      .map {
-        case Right(_) => NoContent
-        case Left(_: NotFoundException) => NotFound
-        case Left(_: ForbiddenException) => Forbidden
-        case Left(_: TaskNotArchivedException) => Locked
-      }.recover(ControllerUtils.logAndInternalServerError)
+  def deleteTask(id: String): Action[AnyContent] = appAction.async(parse.default) {
+    { request =>
+      taskRepository.delete(id, request.username)
+        .map {
+          case Right(_) => NoContent
+          case Left(_: NotFoundException) => NotFound
+          case Left(_: ForbiddenException) => Forbidden
+          case Left(_: TaskNotArchivedException) => Locked
+        }.recover(ControllerUtils.logAndInternalServerError)
+    }
   }
 
   // Add with POST /tasks
@@ -106,13 +108,20 @@ class TaskController @Inject() (
   }
 
   //Archive with PUT /task/{id}/archive
-  def archiveTask(id: String, archiveOrRestore: Boolean): Action[JsValue] = appAction.async(parse.json) { request =>
-    taskRepository.archive(id, request.username, archiveOrRestore)
-      .map {
-        case Right(_) => NoContent
-        case Left(exception: NotFoundException) => NotFound(exception.message)
-        case Left(exception: ForbiddenException) => Forbidden(exception.message)
-      }.recover(ControllerUtils.logAndInternalServerError)
+  def archiveTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[ArchiveOrRestoreRequest]
+        .fold(
+          ControllerUtils.badRequest,
+          booleanArchiveOrRestore => {
+            taskRepository.archive(id, request.username, booleanArchiveOrRestore.archive)
+              .map {
+                case Right(_) => NoContent
+                case Left(exception: NotFoundException) => NotFound(exception.message)
+                case Left(exception: ForbiddenException) => Forbidden(exception.message)
+              }.recover(ControllerUtils.logAndInternalServerError)
+          }
+        )
+
   }
 
   def changeParentListOfTask(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
@@ -178,9 +187,9 @@ class TaskController @Inject() (
     Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TaskController.findTaskById(task.id).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteTask", "Delete this task", routes.TaskController.deleteTask(task.id).toString, "DELETE", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("updateTask", "Update this task", routes.TaskController.updateTask(task.id).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("archiveTask", "Archive this task", routes.TaskController.archiveTask(task.id, true).toString, "PUT", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLink("restoreTask", "Restore this task", routes.TaskController.archiveTask(task.id, false).toString, "PUT", "application/json") ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateTask", "Update this task", routes.TaskController.updateTask(task.id).toString, "PUT", "application/json", routes.Schemas.updateTaskSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("archiveTask", "Archive this task with true", routes.TaskController.archiveTask(task.id).toString, "PUT", "application/json", routes.Schemas.archiveOrRestoreSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("restoreTask", "Restore this task with false", routes.TaskController.archiveTask(task.id).toString, "PUT", "application/json", routes.Schemas.archiveOrRestoreSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("updateListId", "Update the listId of this task", routes.TaskController.changeParentListOfTask(task.id).toString, "PUT", "application/json", routes.Schemas.listIdOfTaskUpdateSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("updateLabel", "Update the label of this task", routes.TaskController.changeLabelOfTask(task.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("updateDescription", "Change description of this task", routes.TaskController.changeDescriptionOfTask(task.id).toString, "PUT", "application/json", routes.Schemas.descriptionUpdateSchema.toString) ::

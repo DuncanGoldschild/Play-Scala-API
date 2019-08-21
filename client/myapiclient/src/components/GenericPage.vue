@@ -1,19 +1,14 @@
 <template>
-  <v-card class="mx-auto">
-    <div id="GET" v-if="control.verb=='GET'">
+  <v-card class="mx-auto" color="#b1b1ff">
+    <div>
       <v-form>
-        <v-container>
-          <h2>{{control.title}}</h2>
+        <h2>{{control.title}}</h2>
+        <v-container v-if="control.verb=='GET'||control.verb == 'DELETE'">
           <v-btn v-on:click.native="onSubmit">{{control.verb}}</v-btn>
         </v-container>
-      </v-form>
-    </div>
-    <div id="POST" v-if="control.verb=='POST'">
-      <v-form>
-        <v-container>
-          <h2>{{control.title}}</h2>
+        <v-container v-if="control.verb=='POST'||control.verb == 'PUT' ">
           <div v-for="[field] of Object.entries(control.schema)" v-bind:key="field">
-            <h4>{{field}}</h4>
+            <h4>{{field}}:</h4>
             <v-text-field v-model="control.schema[field]" type="text" v-bind:placeholder="field"></v-text-field>
           </div>
           <v-btn v-on:click.native="onSubmit">{{control.verb}}</v-btn>

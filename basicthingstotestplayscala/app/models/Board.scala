@@ -68,6 +68,13 @@ object TasksListUpdateRequest{
 
   implicit val listUpdateRequestReads: Reads[TasksListUpdateRequest] = Json.reads[TasksListUpdateRequest]
 
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "membersUsername" -> "Seq[String]"
+    )
+  }
+
 }
 
 case class Task (id: String, label: String, description: String, archived: Boolean, listId: String, membersUsername: Seq[String])
@@ -100,7 +107,15 @@ object TaskUpdateRequest{
 
   implicit val listUpdateRequestReads: Reads[TaskUpdateRequest] = Json.reads[TaskUpdateRequest]
 
-
+  def schema: JsObject = {
+    Json.obj(
+      "label" -> "String",
+      "description" -> "String",
+      "archived" -> "Boolean",
+      "listdId" -> "String",
+      "membersUsername" -> "Seq[String]"
+    )
+  }
 }
 
 case class ListIdOfTaskUpdateRequest (listId: String)
@@ -165,6 +180,18 @@ object LabelUpdateRequest {
   def schema: JsObject = {
     Json.obj(
       "label" -> "String"
+    )
+  }
+}
+
+case class ArchiveOrRestoreRequest (archive: Boolean)
+object ArchiveOrRestoreRequest {
+
+  implicit val labelUpdateReads: Reads[ArchiveOrRestoreRequest] = Json.reads[ArchiveOrRestoreRequest]
+
+  def schema: JsObject = {
+    Json.obj(
+      "archive" -> "Boolean"
     )
   }
 }

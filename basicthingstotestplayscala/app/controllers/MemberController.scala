@@ -56,7 +56,7 @@ class MemberController @Inject() (
   }
 
   // Delete with DELETE /member/{username}
-  def deleteMember(username: String): Action[JsValue] = appAction.async(parse.json) { request =>
+  def deleteMember(username: String): Action[AnyContent] = appAction.async(parse.default) { request =>
     memberRepository.delete(username, request.username)
       .map {
         case Right(_) => NoContent

@@ -134,9 +134,9 @@ class TasksListController @Inject()(
   }
 
   private def generateHypermediaTasksControls(listOfTask: List[Task]): Future[List[JsObject]] = {
-    var listTasksList: List[JsObject] = List()
+    var listTasks: List[JsObject] = List()
     for (task <- listOfTask)
-      listTasksList = ControllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
-    Future.successful(listTasksList)
+      listTasks = ControllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TaskController.findTaskById(task.id).toString, "GET", "application/json") :: listTasks
+    Future.successful(listTasks)
   }
 }

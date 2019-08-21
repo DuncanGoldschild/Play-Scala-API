@@ -17,6 +17,14 @@ class Schemas @Inject() (
     Future.successful(Ok(BoardCreationRequest.schema))
   }
 
+  def archiveOrRestoreSchema: Action[AnyContent] = Action.async { _ =>
+    Future.successful(Ok(ArchiveOrRestoreRequest.schema))
+  }
+
+  def updateTaskSchema: Action[AnyContent] = Action.async { _ =>
+    Future.successful(Ok(TaskUpdateRequest.schema))
+  }
+
   def authSchema: Action[AnyContent] = Action.async { _ =>
     Future.successful(Ok(Member.schema))
   }
