@@ -1,5 +1,5 @@
 <template>
-  <v-card class="mx-auto" color="#b1b1ff">
+  <v-card height="100%" class="mx-auto" color="#b1b1ff">
     <div>
       <v-form>
         <h2>{{control.title}}</h2>
@@ -20,6 +20,7 @@
 
 <script>
 import infoService from "../services/infoService";
+import { reject } from "q";
 export default {
   name: "generic-page",
   props: {
@@ -46,11 +47,14 @@ export default {
     onSubmit() {
       infoService
         .httpAction(this.control.href, this.control.verb, this.control.schema)
-        .then(newPage => {
-          this.$parent.controls = newPage.controlsHTTP;
-          this.$parent.infos = newPage.infoHTTP;
-          this.$parent.elements = newPage.elementsHTTP;
-        })
+        .then(
+          newPage => {
+            this.$parent.controls = newPage.controlsHTTP;
+            this.$parent.infos = newPage.infoHTTP;
+            this.$parent.elements = newPage.elementsHTTP;
+          },
+          reject => console.log(reject)
+        )
         .catch(error => {
           console.log(error);
         });

@@ -54,7 +54,7 @@ export default {
                                     .getRoute(action.schema)
                                     .then(responseSchema => {
                                         action.schema = responseSchema.data;
-                                        controlsBuffer.push(action);
+                                        controlsBuffer.unshift(action);
                                     })
                                     .catch(error => {
                                         reject(error);
@@ -80,39 +80,26 @@ export default {
                     trelloService.update(route, data)
                         .then(updateResponse => {
                             console.log(updateResponse)
-                        })
-                        .then(() => {
-                            resolve(
-                                {
-                                    infoHTTP: infoBuffer,
-                                    controlsHTTP: controlsBuffer,
-                                    elementsHTTP: elementsBuffer
-                                }
-                            )
+                            this.httpAction(localStorage.getItem('route'), "GET")
+                                .then(newPage => {
+                                    resolve(newPage)
+                                })
                         })
                         .catch(error => {
                             reject(error);
                         });
                     break;
-                    case "DELETE":
-                        trelloService.delete(route)
-                            .then(deleteResponse => {
-                                console.log(deleteResponse)
-                            })
-                            .then(() => {
-                                resolve(
-                                    {
-                                        infoHTTP: infoBuffer,
-                                        controlsHTTP: controlsBuffer,
-                                        elementsHTTP: elementsBuffer
-                                    }
-                                )
-                            })
-                            .catch(error => {
-                                reject(error);
-                            });
-                        break;
+                case "DELETE":
+                    trelloService.delete(route)
+                        .then(deleteResponse => {
+                            console.log(deleteResponse)
+                        })
+                        .catch(error => {
+                            reject(error);
+                        });
+                    break;
                 case "GET":
+                    localStorage.setItem('route', route)
                     trelloService.getRoute(route)
                         .then(response => {
                             console.log(response)
@@ -153,14 +140,6 @@ export default {
                                             reject(error);
                                         });
                                 });
-                            }
-                            else if (response.data["info"]) {
-                                resolve(
-                                    {
-                                        infoHTTP: response.data["info"],
-                                        controlsHTTP: controlsBuffer
-                                    }
-                                )
                             }
                         })
                         .then(() => {

@@ -12,7 +12,7 @@
       <h2>Elements included:</h2>
       <v-list-item v-for="element in elements" v-bind:key="element.label">
         <v-list-item-content>
-          <v-list-item-title>{{element}}</v-list-item-title>
+          <v-list-item-title v-for="[field, value] of Object.entries(element)" v-bind:key="field">{{field}}: {{value}}</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
     </div>
