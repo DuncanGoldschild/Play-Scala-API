@@ -25,7 +25,7 @@ class TasksListController @Inject()(
                                 ) extends AbstractController(components) {
 
   // Display the ListTask by its id with GET /list/{id}
-  def findListTaskById(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  def findListTaskById(id: String): Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     listTaskRepository.find(id, request.username)
       .flatMap {
         case Right(list) =>
@@ -33,14 +33,14 @@ class TasksListController @Inject()(
             tasks <- taskRepository.listAllTasksFromListId(id)
             listWithControls <- generateHypermediaListSelfControls(list)
             tasksControls <- generateHypermediaTasksControls(tasks)
-          } yield Ok(Json.obj("info" -> Json.toJson(list), "tasks" -> tasksControls, "@controls" -> listWithControls))
+          } yield Ok(Json.obj("info" -> Json.toJson(list), "elements" -> tasksControls, "@controls" -> listWithControls))
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)
   }
 
   // Display all ListTask elements with GET /lists
-  def allListTasks: Action[AnyContent] = appAction.async { request =>
+  def allListTasks: Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     listTaskRepository.listAllFromUsername(request.username).map {
       list => Ok(Json.toJson(list))
     }.recover(ControllerUtils.logAndInternalServerError)
@@ -134,9 +134,9 @@ class TasksListController @Inject()(
   }
 
   private def generateHypermediaTasksControls(listOfTask: List[Task]): Future[List[JsObject]] = {
-    var listTasksList: List[JsObject] = List()
+    var listTasks: List[JsObject] = List()
     for (task <- listOfTask)
-      listTasksList = ControllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TasksListController.findListTaskById(task.id).toString, "GET", "application/json") :: listTasksList
-    Future.successful(listTasksList)
+      listTasks = ControllerUtils.createIdAndLabelElementJsonLink(task.id, task.label, "get", routes.TaskController.findTaskById(task.id).toString, "GET", "application/json") :: listTasks
+    Future.successful(listTasks)
   }
 }

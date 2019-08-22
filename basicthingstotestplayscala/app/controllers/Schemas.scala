@@ -2,7 +2,6 @@ package controllers
 
 import javax.inject.Inject
 import models._
-import play.api.libs.json._
 import play.api.mvc._
 import utils.AppAction
 
@@ -14,43 +13,51 @@ class Schemas @Inject() (
                           appAction: AppAction
                         ) extends AbstractController(components) {
 
-  def createBoardSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def createBoardSchema: Action[AnyContent] = Action.async { _ =>
     Future.successful(Ok(BoardCreationRequest.schema))
   }
 
-  def authSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def archiveOrRestoreSchema: Action[AnyContent] = Action.async { _ =>
+    Future.successful(Ok(ArchiveOrRestoreRequest.schema))
+  }
+
+  def updateTaskSchema: Action[AnyContent] = Action.async { _ =>
+    Future.successful(Ok(TaskUpdateRequest.schema))
+  }
+
+  def authSchema: Action[AnyContent] = Action.async { _ =>
     Future.successful(Ok(Member.schema))
   }
 
-  def updatePasswordMemberSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def updatePasswordMemberSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(MemberUpdateRequest.schema))
   }
 
-  def createListSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def createListSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(TasksListCreationRequest.schema))
   }
 
-  def createTaskSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def createTaskSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(TaskCreationRequest.schema))
   }
 
-  def updateBoardSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def updateBoardSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(BoardUpdateRequest.schema))
   }
 
-  def addDeleteMemberSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def addDeleteMemberSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(MemberAddOrDelete.schema))
   }
 
-  def updateLabelSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def updateLabelSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(LabelUpdateRequest.schema))
   }
 
-  def descriptionUpdateSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def descriptionUpdateSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(DescriptionUpdateRequest.schema))
   }
 
-  def listIdOfTaskUpdateSchema: Action[JsValue] = appAction.async(parse.json) { _ =>
+  def listIdOfTaskUpdateSchema: Action[AnyContent] = appAction.async { _ =>
     Future.successful(Ok(ListIdOfTaskUpdateRequest.schema))
   }
   //Todo : all other schemas and routes

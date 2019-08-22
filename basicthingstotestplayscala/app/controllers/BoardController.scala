@@ -22,12 +22,14 @@ class BoardController @Inject() (
                                  appAction: AppAction
                                ) extends AbstractController(components) {
 
-  def test = Action {
-    Ok("OK fréro t co")
+  def test: Action[AnyContent] = Action.async {
+    for {
+      welcomeControls <- generateWelcomeHypermedia
+    } yield Ok(Json.obj( "@controls" -> welcomeControls))
   }
 
   // Returns a JSON of the board by its id with GET /board/{id}
-  def findBoardById(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  def findBoardById(id: String): Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     boardRepository.find(id, request.username)
       .flatMap {
         case Right(board) =>
@@ -35,14 +37,14 @@ class BoardController @Inject() (
             lists <- tasksListRepository.listAllListsFromBoardId(id)
             listsWithControls <- generateHypermediaListsControls(lists)
             boardControls <- generateHypermediaBoardSelfControls(board)
-          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.toJson(board), "lists", listsWithControls, boardControls))
+          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.toJson(board), listsWithControls, boardControls))
         case Left(_: NotFoundException) => Future.successful(NotFound)
         case Left(_: ForbiddenException) => Future.successful(Forbidden)
       }.recover(ControllerUtils.logAndInternalServerError)
   }
 
   // Returns a JSON of all board elements with GET /boards
-  def allUserBoards: Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  def allUserBoards: Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     val username = request.username
     boardRepository.listAllFromUsername(username)
       .flatMap {
@@ -50,12 +52,12 @@ class BoardController @Inject() (
           for {
             boardsSelfControls <- generateHypermediaBoardsSelfControls
             boardsControls <- generateHypermediaBoardsControls(listOfBoards)
-          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.obj("username" -> username), "boards", boardsControls, boardsSelfControls))
+          } yield Ok(ControllerUtils.hypermediaStructureResponse(Json.obj("username" -> username), boardsControls, boardsSelfControls))
       }
   }
 
   // Delete with DELETE /board/{id}
-  def deleteBoard(id: String): Action[JsValue] = appAction.async(parse.json) { request: UserRequest[JsValue] =>
+  def deleteBoard(id: String): Action[AnyContent] = appAction.async(parse.default) { request: UserRequest[AnyContent] =>
     boardRepository.delete(id, request.username)
       .map {
         case Right(_) => NoContent
@@ -126,6 +128,13 @@ class BoardController @Inject() (
             }.recover(ControllerUtils.logAndInternalServerError)
         }
       )
+  }
+
+  private def generateWelcomeHypermedia: Future[List[JsObject]] = {
+    Future.successful(
+      ControllerUtils.createCRUDActionJsonLinkWithSchema("auth", "Authenticate", routes.MemberController.authMember.toString, "POST", "application/json", routes.Schemas.authSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("createMember", "Create a new account", routes.MemberController.createNewMember.toString, "POST", "application/json", routes.Schemas.authSchema.toString) :: List()
+    )
   }
 
   private def generateHypermediaBoardSelfControls(board: Board): Future[List[JsObject]] = {
