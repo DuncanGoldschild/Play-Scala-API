@@ -20,7 +20,11 @@
 
 <script>
 import infoService from "../services/infoService";
-import { reject } from "q";
+import Home from "@/views/Home.vue";
+import * as Vue from "vue/dist/vue.common.js";
+import GenericPage from "@/components/GenericPage.vue";
+import App from "@/App.vue";
+
 export default {
   name: "generic-page",
   props: {
@@ -49,6 +53,39 @@ export default {
         .httpAction(this.control.href, this.control.verb, this.control.schema)
         .then(
           newPage => {
+            var ComponentGeneric = new Vue({
+              name: "homie",
+              el: "#app",
+              template: `<div>{{infos}}</div>`,
+              components: {
+                GenericPage
+              },
+              appName: "DDDDDD",
+              data: {
+                  controls: newPage.controlsHTTP,
+                  elements: newPage.elementsHTTP,
+                  infos: newPage.infoHTTP
+              },
+              mounted: function() {
+                console.log("new generic");
+              }
+            });
+            this.$router.addRoutes([
+              {
+                path: this.control.href,
+                name: "foo",
+                component: ComponentGeneric.default,
+                props: true
+              }
+            ]);
+            this.$router.push({
+              path: this.control.href,
+              params: {
+                controls: newPage.controlsHTTP,
+                infos: newPage.infoHTTP,
+                elements: newPage.elementsHTTP
+              }
+            });
             this.$parent.controls = newPage.controlsHTTP;
             this.$parent.infos = newPage.infoHTTP;
             this.$parent.elements = newPage.elementsHTTP;

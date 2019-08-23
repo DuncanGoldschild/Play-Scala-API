@@ -47,6 +47,7 @@ export default {
     };
   },
   mounted() {
+    console.log("new home")
     infoService
       .firstLink()
       .then(firstControls => {
