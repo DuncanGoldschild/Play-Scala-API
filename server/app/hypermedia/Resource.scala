@@ -24,8 +24,6 @@ case class Resource[A](
   def this(value: A, embedded: List[HypermediaControl.EmbeddedEntity], controls: Map[String, HypermediaControl]) =
     this(Some(value), None, embedded, controls)
 
-  def toJson(implicit writes: Writes[A]): JsValue = Json.toJson(this)(writes())
-
   implicit def writes(implicit writesA: Writes[A]): Writes[Resource[A]] =
     (resource: Resource[A]) =>
       JsObject(
@@ -58,5 +56,7 @@ case class Resource[A](
       None
     else
       Some(JsArray(entry.map { Json.toJson(_)} ))
+
+  def toJson(implicit writes: Writes[A]): JsValue = Json.toJson(this)(this.writes)
 
 }

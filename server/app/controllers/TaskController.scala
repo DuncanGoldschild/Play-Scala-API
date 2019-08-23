@@ -194,7 +194,7 @@ class TaskController @Inject() (
     Hypermedia.createControl("updateListId", "Update the listId of this task", routes.TaskController.changeParentListOfTask(task.id), Http.MediaType.JSON, Schemas.updateTaskSchema),
     Hypermedia.createControl("updateLabel", "Update the label of this task", routes.TaskController.changeLabelOfTask(task.id), Http.MediaType.JSON, Schemas.updateLabelSchema),
     Hypermedia.createControl("updateDescription", "Change description of this task", routes.TaskController.changeDescriptionOfTask(task.id), Http.MediaType.JSON, Schemas.archiveOrRestoreSchema),
-    Hypermedia.createControl("addMemberToTask", "Add a member to this task", routes.TaskController.addMemberToTask(task.id), Http.MediaType.JSON, Schemas.addDeleteMemberSchema()),
+    Hypermedia.createControl("addMemberToTask", "Add a member to this task", routes.TaskController.addMemberToTask(task.id), Http.MediaType.JSON, Schemas.addDeleteMemberSchema),
     Hypermedia.createControl("deleteMemberFromTask", "Delete a member from this task", routes.TaskController.deleteMemberFromTask(task.id), Http.MediaType.JSON, Schemas.addDeleteMemberSchema)
   )
 

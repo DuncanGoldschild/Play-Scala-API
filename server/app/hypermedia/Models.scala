@@ -26,7 +26,7 @@ object HypermediaControl {
   def reference(id: String, label: String, selfControl: HypermediaControl): EmbeddedEntity
     = new Resource(Reference(id, label), Map("self" -> selfControl))
 
-  implicit lazy val writes: Writes[HypermediaControl] = Json.writes[HypermediaControl]()
+  implicit lazy val writes: Writes[HypermediaControl] = Json.writes[HypermediaControl]
 
 }
 

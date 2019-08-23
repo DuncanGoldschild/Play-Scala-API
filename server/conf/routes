@@ -50,7 +50,7 @@ POST    /members/auth               controllers.MemberController.authMember
 
 
 #Schemas
-GET     /schema/:name               controllers.Schemas.findSchemaByName
+GET     /schema/:name               controllers.Schemas.findSchemaByName(name: String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

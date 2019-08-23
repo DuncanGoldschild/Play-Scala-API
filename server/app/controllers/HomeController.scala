@@ -18,20 +18,25 @@ object HomeController {
 
   lazy val HYPERMEDIA_CONTROLS: List[JsObject] = List(AUTHENTICATION_CONTROL, CREATE_MEMBER_CONTROL)
 
-  lazy val AUTHENTICATION_CONTROL: JsObject = Hypermedia.createControl(
+  lazy val AUTHENTICATION_CONTROL: JsObject = {
+    val controls = Hypermedia.createControl(
     "auth",
     "Authenticate",
     routes.MemberController.authMember(),
     Http.MediaType.JSON,
     Schemas.authSchema
   )
+    Json.obj(controls._1 -> controls._2)
+  }
 
-  lazy val CREATE_MEMBER_CONTROL: JsObject = Hypermedia.createControl(
-    "createMember",
-    "Create a new account",
-    routes.MemberController.createNewMember(),
-    Http.MediaType.JSON,
-    Schemas.authSchema
-  )
-
+  lazy val CREATE_MEMBER_CONTROL: JsObject = {
+    val controls = Hypermedia.createControl(
+      "createMember",
+      "Create a new account",
+      routes.MemberController.createNewMember(),
+      Http.MediaType.JSON,
+      Schemas.authSchema
+    )
+    Json.obj(controls._1 -> controls._2)
+  }
 }

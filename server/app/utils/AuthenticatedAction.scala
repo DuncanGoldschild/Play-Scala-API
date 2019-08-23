@@ -6,6 +6,7 @@ import services.DefaultJwtService
 
 import scala.concurrent.{ExecutionContext, Future}
 
+class RequestWithAuth[A](val username: String, request: Request[A]) extends WrappedRequest[A](request)
 class AuthenticatedAction @Inject()(val parser: BodyParsers.Default)
                                    (implicit val executionContext: ExecutionContext)
   extends ActionBuilder[RequestWithAuth, AnyContent] {
@@ -13,7 +14,7 @@ class AuthenticatedAction @Inject()(val parser: BodyParsers.Default)
   override def invokeBlock[A](request: Request[A], block: RequestWithAuth[A] => Future[Result]): Future[Result] = {
     request.headers.get("Authorization")
       .flatMap(DefaultJwtService.getUsernameFromToken)
-      .map { _ => block(new RequestWithAuth[A](_, request)) }
+      .map { username => block(new RequestWithAuth[A](username, request)) }
       .getOrElse(unauthorized)
   }
 
@@ -21,4 +22,3 @@ class AuthenticatedAction @Inject()(val parser: BodyParsers.Default)
 
 }
 
-class RequestWithAuth[A](val username: String, request: Request[A]) extends WrappedRequest[A](request)

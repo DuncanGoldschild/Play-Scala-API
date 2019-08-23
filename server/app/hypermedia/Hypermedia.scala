@@ -16,19 +16,19 @@ object Hypermedia {
     Json.toJson(resource)(resource.writes)
   }
 
-  def createControl(id: String, label: String, name: String, uri: String, verb: String, mediaType: String) =
+  def createControl(id: String, label: String, name: String, uri: String, verb: String, mediaType: String): EmbeddedEntity =
     HypermediaControl.reference(id, label, HypermediaControl("Get: "+label, uri, verb, mediaType, None))
 
-  def createControl(id: String, label: String, name: String, call: Call, mediaType: String) =
+  def createControl(id: String, label: String, name: String, call: Call, mediaType: String): EmbeddedEntity =
     createControl(id, label, name, call.url, call.method, mediaType)
 
-  def createControl(name: String, title: String, uri: String, verb: String, mediaType: String) =
+  def createControl(name: String, title: String, uri: String, verb: String, mediaType: String): (String, HypermediaControl) =
     name -> HypermediaControl(title, uri, verb, mediaType, None)
 
-  def createControl(name: String, title: String, call: Call, mediaType: String) =
+  def createControl(name: String, title: String, call: Call, mediaType: String): (String, HypermediaControl) =
     createControl(name, title, call.url, call.method, mediaType)
 
-  def createControl(name: String, title: String, call: Call, mediaType: String, schema: JsObject) =
+  def createControl(name: String, title: String, call: Call, mediaType: String, schema: JsObject): (String, HypermediaControl) =
     name -> HypermediaControl(title, call, mediaType, schema)
 
 }
