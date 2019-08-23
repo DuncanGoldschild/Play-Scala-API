@@ -77,6 +77,19 @@ class MongoTasksListRepository @Inject()(
         case _ => Future.successful(Left(ForbiddenException("You don't have access to this tasksList")))
       }
   }
+
+  def changeLabel(id: String, username: String, newLabel: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(list) if isUsernameContainedInTasksList(username, list) =>
+          updateField(idSelector(id), BSONDocument("label" -> newLabel))
+            .map {
+              _ => Right()
+            }
+        case None => Future.successful(Left(NotFoundException("List not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this List")))
+      }
+  }
   
   def create(newListTask: TasksListCreationRequest, username: String): Future[Either[Exception, TasksList]] = {
     boardRepository.findOne(newListTask.boardId)

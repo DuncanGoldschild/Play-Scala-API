@@ -16,6 +16,7 @@ PUT     /board/:id                  controllers.BoardController.updateBoard(id :
 DELETE  /board/:id                  controllers.BoardController.deleteBoard(id : String)
 PUT     /board/:id/addMember        controllers.BoardController.addMemberToBoard(id: String)
 PUT     /board/:id/deleteMember     controllers.BoardController.deleteMemberFromBoard(id: String)
+PUT     /board/:id/updateLabel      controllers.BoardController.changeLabelOfBoard(id: String)
 
 #List Request
 GET     /lists                      controllers.TasksListController.allListTasks
@@ -25,6 +26,7 @@ PUT     /list/:id                   controllers.TasksListController.updateListTa
 DELETE  /list/:id                   controllers.TasksListController.deleteListTask(id : String)
 PUT     /list/:id/addMember         controllers.TasksListController.addMemberToList(id: String)
 PUT     /list/:id/deleteMember      controllers.TasksListController.deleteMemberFromList(id: String)
+PUT     /list/:id/updateLabel       controllers.TasksListController.changeLabelOfTasksList(id: String)
 
 #Task Request
 GET     /tasks                      controllers.TaskController.allTasks

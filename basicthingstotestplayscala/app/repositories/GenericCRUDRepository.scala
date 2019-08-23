@@ -110,13 +110,13 @@ trait GenericCRUDRepository [A] {
       .map(verifyUpdatedOneDocument)
   }
 
-  def updateField(selector: BSONDocument, field: BSONDocument): Future[Option[Unit]] = {
+  def updateField(selector: BSONDocument, field: BSONDocument)(implicit bsonReader: BSONDocumentReader[A]): Future[Option[Unit]] = {
     collection.flatMap(_.findAndUpdate(
       selector,
       BSONDocument("$set" -> field),
-      fetchNewObject = true)
+      fetchNewObject = false)
       .map {
-        _.result[Task]
+        _.result[A]
           .map {
             _ =>
           }

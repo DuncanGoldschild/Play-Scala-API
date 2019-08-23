@@ -72,6 +72,19 @@ class MongoBoardRepository @Inject() (
       }
   }
 
+  def changeLabel(id: String, username: String, newLabel: String): Future[Either[Exception, Unit]] = {
+    findOne(id)
+      .flatMap {
+        case Some(board) if isUsernameContainedInBoard(username, board) =>
+          updateField(idSelector(id), BSONDocument("label" -> newLabel))
+            .map {
+              _ => Right()
+            }
+        case None => Future.successful(Left(NotFoundException("Board not found")))
+        case _ => Future.successful(Left(ForbiddenException("You don't have access to this Board")))
+      }
+  }
+
   def find(boardId: String, username: String): Future[Either[Exception, Board]] = {
     findOne(boardId)
       .flatMap {

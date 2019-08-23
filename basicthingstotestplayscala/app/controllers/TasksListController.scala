@@ -8,7 +8,7 @@ import play.api.mvc.{Action, _}
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.{MongoTaskRepository, MongoTasksListRepository}
-import models.{BadRequestException, ForbiddenException, MemberAddOrDelete, NotFoundException, Task, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
+import models.{BadRequestException, ForbiddenException, LabelUpdateRequest, MemberAddOrDelete, NotFoundException, Task, TasksList, TasksListCreationRequest, TasksListUpdateRequest}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -90,6 +90,21 @@ class TasksListController @Inject()(
       )
   }
 
+  def changeLabelOfTasksList(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[LabelUpdateRequest]
+      .fold(
+        ControllerUtils.badRequest,
+        newLabelRequest => {
+          listTaskRepository.changeLabel(id, request.username, newLabelRequest.label)
+          .map {
+            case Right(_) => NoContent
+            case Left(exception: NotFoundException) => NotFound(exception.message)
+            case Left(exception: ForbiddenException) => Forbidden(exception.message)
+          }.recover(ControllerUtils.logAndInternalServerError)
+        }
+      )
+  }
+
   def addMemberToList (id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[MemberAddOrDelete]
       .fold(
@@ -126,7 +141,7 @@ class TasksListController @Inject()(
     Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.TasksListController.findListTaskById(list.id).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteList", "Delete this list", routes.TasksListController.deleteListTask(list.id).toString, "DELETE", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateListLabel", "Update this list's label", routes.TasksListController.updateListTask(list.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateListLabel", "Update this list's label", routes.TasksListController.changeLabelOfTasksList(list.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("addMemberToList", "Add a member to this list", routes.TasksListController.addMemberToList(list.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("deleteMemberFromList", "Delete a member from this list", routes.TasksListController.deleteMemberFromList(list.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("createTask", "Create a new task", routes.TaskController.createNewTask.toString, "POST", "application/json", routes.Schemas.createTaskSchema.toString) :: List()

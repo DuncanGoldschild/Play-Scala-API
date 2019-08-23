@@ -8,7 +8,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import com.google.inject.Singleton
 import repositories.{MongoBoardRepository, MongoMemberRepository, MongoTasksListRepository}
-import models.{BadRequestException, Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, MemberAddOrDelete, NotFoundException, TasksList}
+import models.{BadRequestException, Board, BoardCreationRequest, BoardUpdateRequest, ForbiddenException, LabelUpdateRequest, MemberAddOrDelete, NotFoundException, TasksList}
 import utils.{AppAction, ControllerUtils, UserRequest}
 
 
@@ -82,6 +82,20 @@ class BoardController @Inject() (
       )
   }
 
+  def changeLabelOfBoard(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
+    request.body.validate[LabelUpdateRequest]
+      .fold(
+        ControllerUtils.badRequest,
+        newLabelRequest =>
+          boardRepository.changeLabel(id, request.username, newLabelRequest.label)
+            .map {
+              case Right(_) => NoContent
+              case Left(exception: NotFoundException) => NotFound(exception.message)
+              case Left(exception: ForbiddenException) => Forbidden(exception.message)
+            }.recover(ControllerUtils.logAndInternalServerError)
+      )
+  }
+
   // Update with PUT /board/{id}
   def updateBoard(id: String): Action[JsValue] = appAction.async(parse.json) { request =>
     request.body.validate[BoardUpdateRequest]
@@ -141,7 +155,7 @@ class BoardController @Inject() (
     Future.successful(
       ControllerUtils.createCRUDActionJsonLink("self", "Self informations", routes.BoardController.findBoardById(board.id).toString, "GET", "application/json") ::
         ControllerUtils.createCRUDActionJsonLink("deleteBoard", "Delete this board", routes.BoardController.deleteBoard(board.id).toString, "DELETE", "application/json") ::
-        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateLabel", "Update this board's label", routes.BoardController.updateBoard(board.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
+        ControllerUtils.createCRUDActionJsonLinkWithSchema("updateLabel", "Update this board's label", routes.BoardController.changeLabelOfBoard(board.id).toString, "PUT", "application/json", routes.Schemas.updateLabelSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("addMemberToBoard", "Add a member to this board", routes.BoardController.addMemberToBoard(board.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("deleteMemberFromBoard", "Delete a member from this board", routes.BoardController.deleteMemberFromBoard(board.id).toString, "PUT", "application/json", routes.Schemas.addDeleteMemberSchema.toString) ::
         ControllerUtils.createCRUDActionJsonLinkWithSchema("createList", "Create a new list", routes.TasksListController.createNewListTask.toString, "POST", "application/json", routes.Schemas.createListSchema.toString) :: List()
